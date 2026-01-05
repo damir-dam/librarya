@@ -1347,6 +1347,7 @@ function Library._CreateSlider(tab, config)
     local callback = config.Callback or function() end
     local flag = config.Flag
     local currentValue = default
+    local round = config.Round or 0
 
     local frame = CreateInstance("Frame", {
         Name = "Slider_" .. name,
@@ -1372,77 +1373,160 @@ function Library._CreateSlider(tab, config)
         Parent = frame
     })
 
-    local valueLabel = CreateInstance("TextLabel", {
-        Name = "Value",
+    -- Заменяем TextLabel на TextBox
+    local valueBox = CreateInstance("TextBox", {
+        Name = "ValueBox",
         FontFace = f.Regular,
         TextColor3 = c.Text,
         Text = tostring(currentValue),
+        PlaceholderText = "Value",
+        PlaceholderColor3 = c.TextDark,
         TextXAlignment = Enum.TextXAlignment.Right,
-        BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        BackgroundTransparency = 0,
         Position = UDim2.new(1, -60, 0, 5),
         TextSize = textsize.Normal,
         Size = UDim2.new(0, 50, 0, 20),
         Parent = frame
     })
+    CreateCorner(valueBox, 3)
+    CreateStroke(valueBox)
 
+    -- Фон для линии слайдера (черный)
     local sliderBg = CreateInstance("Frame", {
         Name = "SliderBackground",
         BackgroundColor3 = Color3.fromRGB(11, 11, 11),
         Position = UDim2.new(0, 10, 0, 29),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -20, 0, 7),
+        Size = UDim2.new(1, -20, 0, 4), -- Уменьшаем высоту линии
         Parent = frame
     })
-    CreateCorner(sliderBg, 100)
+    CreateCorner(sliderBg, 2)
 
+    -- Прогресс (темно-красный)
     local sliderFill = CreateInstance("Frame", {
         Name = "SliderFill",
-        BackgroundColor3 = c.Accent,
+        BackgroundColor3 = Color3.fromRGB(139, 0, 0), -- Темно-красный
         BorderSizePixel = 0,
         Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
         Parent = sliderBg
     })
-    CreateCorner(sliderFill, 100)
+    CreateCorner(sliderFill, 2)
+
+    -- Кружок для перетаскивания
+    local sliderCircle = CreateInstance("Frame", {
+        Name = "SliderCircle",
+        BackgroundColor3 = c.Accent,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+        Size = UDim2.new(0, 16, 0, 16), -- Круглый кружок
+        Parent = sliderBg
+    })
+    CreateCorner(sliderCircle, 100)
+    CreateInstance("UIStroke", {
+        Color = Color3.fromRGB(60, 60, 60),
+        Thickness = 1,
+        Parent = sliderCircle
+    })
+
+    -- Кнопка для перетаскивания (только на кружке)
+    local dragButton = CreateInstance("TextButton", {
+        Name = "DragButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = sliderCircle
+    })
 
     local dragging = false
 
-    local function UpdateSlider(input)
-        local pos = input.Position
-        local framePos = sliderBg.AbsolutePosition
-        local frameSize = sliderBg.AbsoluteSize
-        local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
-        currentValue = math.floor(min + (max - min) * relativeX)
-        CreateTween(sliderFill, {Size = UDim2.new(relativeX, 0, 1, 0)}, 0.05)
-        valueLabel.Text = tostring(currentValue)
+    local function FormatValue(value)
+        if round > 0 then
+            return string.format("%." .. round .. "f", value)
+        end
+        return tostring(math.floor(value))
+    end
+
+    local function UpdateSlider(value)
+        value = tonumber(value) or currentValue
+        currentValue = math.clamp(value, min, max)
+        local relativeX = (currentValue - min) / (max - min)
+        
+        -- Обновляем позицию кружка и прогресс
+        CreateTween(sliderCircle, {Position = UDim2.new(relativeX, 0, 0.5, 0)}, 0.1)
+        sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+        
+        -- Обновляем текстовое поле
+        valueBox.Text = FormatValue(currentValue)
         callback(currentValue)
     end
 
-    sliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            UpdateSlider(input)
+    local function UpdateFromInput()
+        local text = valueBox.Text
+        local numValue = tonumber(text)
+        if numValue then
+            UpdateSlider(numValue)
+        else
+            -- Если ввели не число, возвращаем предыдущее значение
+            valueBox.Text = FormatValue(currentValue)
         end
+    end
+
+    -- Обработка ввода в текстовое поле
+    valueBox.FocusLost:Connect(function(enterPressed)
+        UpdateFromInput()
     end)
 
-    sliderBg.InputEnded:Connect(function(input)
+    valueBox:GetPropertyChangedSignal("Text"):Connect(function()
+        -- Если ввод не закончен, не обновляем слайдер
+        if valueBox:IsFocused() then return end
+        UpdateFromInput()
+    end)
+
+    -- Перетаскивание кружка
+    dragButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+            dragging = true
+            
+            -- Создаем соединение для отслеживания перемещения
+            local connection
+            connection = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                    if connection then
+                        connection:Disconnect()
+                    end
+                end
+            end)
         end
     end)
 
     ui.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateSlider(input)
+            local pos = input.Position
+            local framePos = sliderBg.AbsolutePosition
+            local frameSize = sliderBg.AbsoluteSize
+            local relativeX = math.clamp((pos.X - framePos.X) / frameSize.X, 0, 1)
+            currentValue = min + (max - min) * relativeX
+            
+            -- Форматируем значение
+            if round > 0 then
+                currentValue = math.floor(currentValue * (10 ^ round)) / (10 ^ round)
+            else
+                currentValue = math.floor(currentValue)
+            end
+            
+            -- Обновляем слайдер
+            sliderCircle.Position = UDim2.new(relativeX, 0, 0.5, 0)
+            sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+            valueBox.Text = FormatValue(currentValue)
+            callback(currentValue)
         end
     end)
 
     local methods = {
         SetValue = function(_, value)
-            currentValue = math.clamp(value, min, max)
-            local relativeX = (currentValue - min) / (max - min)
-            sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-            valueLabel.Text = tostring(currentValue)
-            callback(currentValue)
+            UpdateSlider(value)
         end,
         GetValue = function()
             return currentValue
