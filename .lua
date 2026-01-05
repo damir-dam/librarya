@@ -17,7 +17,7 @@ local c = {
     TextFade = Color3.fromRGB(9, 9, 9),
     Accent = Color3.fromRGB(255, 255, 255),
     Toggle = {
-        Enabled = Color3.fromRGB(100, 0, 0),
+        Enabled = Color3.fromRGB(80, 0, 0),
         Disabled = Color3.fromRGB(32, 32, 32),
         Circle = Color3.fromRGB(20, 20, 20)
     },
