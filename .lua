@@ -1746,14 +1746,6 @@ function Library._CreateToggle(tab, config)
     })
     CreateCorner(switchCircle, 100)
 
-    local toggleBtn = CreateInstance("TextButton", {
-        Name = "ToggleButton",
-        Text = "",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = switchCircle
-    })
-
     local button = CreateInstance("TextButton", {
         Name = "Button",
         Text = "",
@@ -1798,25 +1790,43 @@ function Library._CreateToggle(tab, config)
 
     -- Функция для активации режима прослушивания клавиш
     local function StartListening()
+        if listening then return end
         listening = true
         keybindLabel.Text = "..."
         
-        local connection
-        connection = ui.InputBegan:Connect(function(input, gameProcessed)
+        local inputConnection
+        local mouseConnection
+        
+        local function Cleanup()
+            if inputConnection then
+                inputConnection:Disconnect()
+            end
+            if mouseConnection then
+                mouseConnection:Disconnect()
+            end
+            listening = false
+            UpdateKeybindDisplay()
+        end
+        
+        inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then return end
             
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                listening = false
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    keybindKey = Enum.KeyCode.None
+                    Cleanup()
+                    SetupKeybindListener()
+                    return
+                end
+                
                 keybindKey = input.KeyCode
-                UpdateKeybindDisplay()
+                Cleanup()
                 SetupKeybindListener()
-                connection:Disconnect()
             end
         end)
         
         -- Если кликнули вне keybindFrame, отменяем привязку
-        local cancelConnection
-        cancelConnection = ui.InputBegan:Connect(function(input)
+        mouseConnection = ui.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 local mousePos = input.Position
                 local framePos = keybindFrame.AbsolutePosition
@@ -1825,11 +1835,9 @@ function Library._CreateToggle(tab, config)
                 -- Проверяем, кликнули ли вне keybindFrame
                 if mousePos.X < framePos.X or mousePos.X > framePos.X + frameSize.X or
                    mousePos.Y < framePos.Y or mousePos.Y > framePos.Y + frameSize.Y then
-                    listening = false
                     keybindKey = Enum.KeyCode.None
-                    UpdateKeybindDisplay()
-                    connection:Disconnect()
-                    cancelConnection:Disconnect()
+                    Cleanup()
+                    SetupKeybindListener()
                 end
             end
         end)
@@ -1844,9 +1852,7 @@ function Library._CreateToggle(tab, config)
 
     -- Обработка клика по Keybind
     keybindButton.MouseButton1Click:Connect(function()
-        if not listening then
-            StartListening()
-        end
+        StartListening()
     end)
 
     -- Визуальная обратная связь для кнопки Toggle
@@ -1864,7 +1870,9 @@ function Library._CreateToggle(tab, config)
 
     -- Визуальная обратная связь для Keybind
     keybindButton.MouseEnter:Connect(function()
-        CreateTween(keybindFrame, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}, 0.1)
+        if not listening then
+            CreateTween(keybindFrame, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}, 0.1)
+        end
     end)
 
     keybindButton.MouseLeave:Connect(function()
@@ -1876,6 +1884,7 @@ function Library._CreateToggle(tab, config)
     -- Инициализация
     UpdateKeybindDisplay()
     UpdateToggle()
+    SetupKeybindListener()
 
     local methods = {
         SetValue = function(_, value)
@@ -1887,12 +1896,21 @@ function Library._CreateToggle(tab, config)
             return enabled
         end,
         SetKeybind = function(_, key)
-            keybindKey = key
+            if typeof(key) == "EnumItem" and key.EnumType == Enum.KeyCode then
+                keybindKey = key
+            else
+                keybindKey = Enum.KeyCode.None
+            end
             UpdateKeybindDisplay()
             SetupKeybindListener()
         end,
         GetKeybind = function()
             return keybindKey
+        end,
+        Destroy = function()
+            if keybindConnection then
+                keybindConnection:Disconnect()
+            end
         end
     }
 
@@ -1905,22 +1923,14 @@ function Library._CreateToggle(tab, config)
                 }
             end,
             function(value) 
-                if type(value) == "table" then
+                if type(value) == "table" and value.enabled ~= nil then
                     methods:SetValue(value.enabled)
-                    methods:SetKeybind(value.keybind)
+                    methods:SetKeybind(value.keybind or Enum.KeyCode.None)
                 else
                     methods:SetValue(value)
                 end
             end
         )
-    end
-
-    -- Очистка при уничтожении
-    local originalMethods = methods
-    methods.Destroy = function()
-        if keybindConnection then
-            keybindConnection:Disconnect()
-        end
     end
 
     return methods
