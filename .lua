@@ -1665,6 +1665,9 @@ function Library._CreateToggle(tab, config)
     local callback = config.Callback or function() end
     local flag = config.Flag
     local enabled = default
+    local keybindKey = Enum.KeyCode.None
+    local listening = false
+    local keybindConnection = nil
 
     local frame = CreateInstance("Frame", {
         Name = "Toggle_" .. name,
@@ -1686,8 +1689,40 @@ function Library._CreateToggle(tab, config)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = textsize.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(0, 150, 0, 20),
         Parent = frame
+    })
+
+    -- Keybind Frame
+    local keybindFrame = CreateInstance("Frame", {
+        Name = "KeybindFrame",
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        BackgroundTransparency = 0,
+        Position = UDim2.new(1, -140, 0.5, -10),
+        Size = UDim2.new(0, 80, 0, 20),
+        Parent = frame
+    })
+    CreateCorner(keybindFrame, 3)
+    CreateStroke(keybindFrame)
+
+    local keybindLabel = CreateInstance("TextLabel", {
+        Name = "KeybindLabel",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = "None",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        BackgroundTransparency = 1,
+        TextSize = textsize.Small,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = keybindFrame
+    })
+
+    local keybindButton = CreateInstance("TextButton", {
+        Name = "KeybindButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = keybindFrame
     })
 
     local switchBg = CreateInstance("Frame", {
@@ -1727,21 +1762,120 @@ function Library._CreateToggle(tab, config)
         Parent = frame
     })
 
-    local function UpdateToggle()
-        if enabled then
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 21, 0.5, 0)}, animationspeed.Normal)
-        else
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 4, 0.5, 0)}, animationspeed.Normal)
+    local function UpdateKeybindDisplay()
+        keybindLabel.Text = keybindKey == Enum.KeyCode.None and "None" or keybindKey.Name
+    end
+
+    local function SetupKeybindListener()
+        -- Удаляем старый listener если есть
+        if keybindConnection then
+            keybindConnection:Disconnect()
+            keybindConnection = nil
+        end
+        
+        -- Если keybind установлен и не None, создаем новый listener
+        if keybindKey ~= Enum.KeyCode.None then
+            keybindConnection = ui.InputBegan:Connect(function(input, gameProcessed)
+                if gameProcessed then return end
+                if input.KeyCode == keybindKey then
+                    enabled = not enabled
+                    UpdateToggle()
+                    callback(enabled)
+                end
+            end)
         end
     end
 
+    local function UpdateToggle()
+        if enabled then
+            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, 0.15)
+            CreateTween(switchCircle, {Position = UDim2.new(0, 21, 0.5, 0)}, 0.15)
+        else
+            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, 0.15)
+            CreateTween(switchCircle, {Position = UDim2.new(0, 4, 0.5, 0)}, 0.15)
+        end
+    end
+
+    -- Функция для активации режима прослушивания клавиш
+    local function StartListening()
+        listening = true
+        keybindLabel.Text = "..."
+        
+        local connection
+        connection = ui.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                listening = false
+                keybindKey = input.KeyCode
+                UpdateKeybindDisplay()
+                SetupKeybindListener()
+                connection:Disconnect()
+            end
+        end)
+        
+        -- Если кликнули вне keybindFrame, отменяем привязку
+        local cancelConnection
+        cancelConnection = ui.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local mousePos = input.Position
+                local framePos = keybindFrame.AbsolutePosition
+                local frameSize = keybindFrame.AbsoluteSize
+                
+                -- Проверяем, кликнули ли вне keybindFrame
+                if mousePos.X < framePos.X or mousePos.X > framePos.X + frameSize.X or
+                   mousePos.Y < framePos.Y or mousePos.Y > framePos.Y + frameSize.Y then
+                    listening = false
+                    keybindKey = Enum.KeyCode.None
+                    UpdateKeybindDisplay()
+                    connection:Disconnect()
+                    cancelConnection:Disconnect()
+                end
+            end
+        end)
+    end
+
+    -- Обработка клика по Toggle
     button.MouseButton1Click:Connect(function()
         enabled = not enabled
         UpdateToggle()
         callback(enabled)
     end)
+
+    -- Обработка клика по Keybind
+    keybindButton.MouseButton1Click:Connect(function()
+        if not listening then
+            StartListening()
+        end
+    end)
+
+    -- Визуальная обратная связь для кнопки Toggle
+    button.MouseEnter:Connect(function()
+        if not enabled then
+            CreateTween(switchBg, {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}, 0.1)
+        end
+    end)
+
+    button.MouseLeave:Connect(function()
+        if not enabled then
+            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, 0.1)
+        end
+    end)
+
+    -- Визуальная обратная связь для Keybind
+    keybindButton.MouseEnter:Connect(function()
+        CreateTween(keybindFrame, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}, 0.1)
+    end)
+
+    keybindButton.MouseLeave:Connect(function()
+        if not listening then
+            CreateTween(keybindFrame, {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}, 0.1)
+        end
+    end)
+
+    -- Инициализация
+    UpdateKeybindDisplay()
+    UpdateToggle()
 
     local methods = {
         SetValue = function(_, value)
@@ -1751,14 +1885,42 @@ function Library._CreateToggle(tab, config)
         end,
         GetValue = function()
             return enabled
+        end,
+        SetKeybind = function(_, key)
+            keybindKey = key
+            UpdateKeybindDisplay()
+            SetupKeybindListener()
+        end,
+        GetKeybind = function()
+            return keybindKey
         end
     }
 
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Toggle", 
-            function() return enabled end,
-            function(value) methods:SetValue(value) end
+            function() 
+                return {
+                    enabled = enabled,
+                    keybind = keybindKey
+                }
+            end,
+            function(value) 
+                if type(value) == "table" then
+                    methods:SetValue(value.enabled)
+                    methods:SetKeybind(value.keybind)
+                else
+                    methods:SetValue(value)
+                end
+            end
         )
+    end
+
+    -- Очистка при уничтожении
+    local originalMethods = methods
+    methods.Destroy = function()
+        if keybindConnection then
+            keybindConnection:Disconnect()
+        end
     end
 
     return methods
