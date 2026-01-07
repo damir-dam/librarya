@@ -1716,7 +1716,7 @@ function Library._CreateToggle(tab, config)
         TextScaled = true,  -- Масштабирует текст, чтобы помещался
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 0),  -- Поверх фона
-        Size = UDim2.new(1, 0, 1, 0),  -- Полный размер фона
+        Size = UDim2.new(0.8, 0, 0.8, 0),  -- Полный размер фона
         Parent = keybindBg
     })
 
@@ -1759,7 +1759,6 @@ function Library._CreateToggle(tab, config)
         Parent = switchCircle
     })
 
-    -- Добавляем button на frame для кликов на toggle (мышкой)
     local button = CreateInstance("TextButton", {
         Name = "Button",
         Text = "",
@@ -1819,11 +1818,21 @@ function Library._CreateToggle(tab, config)
         StartBinding()
     end)
 
-    -- Клик на toggle (мышкой, на frame)
+    -- Клик на toggle (мышкой, на frame), с проверкой, чтобы не переключать если клик на keybind
     button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        UpdateToggle()
-        callback(enabled)
+        local mousePos = UserInputService:GetMouseLocation()
+        local keybindPos = keybindButton.AbsolutePosition
+        local keybindSize = keybindButton.AbsoluteSize
+        if mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X and
+           mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y then
+            -- Клик на keybind, ничего не делать
+            return
+        else
+            -- Клик на toggle, переключить
+            enabled = not enabled
+            UpdateToggle()
+            callback(enabled)
+        end
     end)
 
     -- Обработка клавиш для toggling по keybind
