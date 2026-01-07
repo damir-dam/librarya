@@ -1701,7 +1701,7 @@ function Library._CreateToggle(tab, config)
         BackgroundColor3 = Color3.fromRGB(128, 0, 0),  -- Темно-красный (maroon)
         BackgroundTransparency = 0,
         Size = UDim2.new(0, 60, 0, 20),  -- Ширина 60 для длинных текстов
-        Position = UDim2.new(1, -38, 0.5, -10),  -- Правее с расстоянием 10 пикселей от toggleBox
+        Position = UDim2.new(1, -18, 0.5, -10),  -- Правее с расстоянием 10 пикселей от toggleBox
         Parent = frame
     })
     CreateCorner(keybindButton, 5)  -- UICorner
@@ -1721,13 +1721,13 @@ function Library._CreateToggle(tab, config)
         Parent = keybindButton
     })
 
-    -- Новый квадратный хитбокс для toggle (теперь квадратный)
+    -- Новый квадратный хитбокс для toggle (теперь точно квадратный, 20x20)
     local toggleBox = CreateInstance("Frame", {
         Name = "ToggleBox",
         BackgroundColor3 = c.Toggle.Disabled,  -- Тёмно-серый цвет
         Position = UDim2.new(1, -48, 0.5, -10),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, s.Toggle.Height, 0, s.Toggle.Height),  -- Квадратный (предполагая, что s.Toggle.Height - сторона квадрата)
+        Size = UDim2.new(0, 20, 0, 20),  -- Квадратный 20x20
         Parent = frame
     })
     CreateCorner(toggleBox, 5)  -- Маленький corner
@@ -1762,7 +1762,7 @@ function Library._CreateToggle(tab, config)
         Name = "Button",
         Text = "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -120, 1, 0),  -- Не покрывает правую часть
+        Size = UDim2.new(1, -90, 1, 0),  -- Не покрывает правую часть (toggleBox 20 + gap 10 + keybind 60 = 90)
         Parent = frame
     })
 
