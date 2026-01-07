@@ -1699,8 +1699,8 @@ function Library._CreateToggle(tab, config)
         Name = "KeybindBackground",
         BackgroundColor3 = Color3.fromRGB(128, 0, 0),  -- Темно-красный (maroon)
         BackgroundTransparency = 0,
-        Size = UDim2.new(0, 60, 0, 20),  -- Увеличил ширину до 60 для длинных текстов
-        Position = UDim2.new(1, -48 - 60, 0.5, -10),  -- Подкорректировал позицию (правее и шире)
+        Size = UDim2.new(0, 60, 0, 20),  -- Ширина 60 для длинных текстов
+        Position = UDim2.new(1, -48 - 60, 0.5, -10),  -- Правее
         Parent = frame
     })
     CreateCorner(keybindBg, 5)  -- UICorner
@@ -1724,7 +1724,7 @@ function Library._CreateToggle(tab, config)
     local keybindButton = CreateInstance("TextButton", {
         Name = "KeybindButton",
         Text = "",
-        BackgroundTransparency = 1,  -- Прозрачная, чтобы не закрывать текст
+        BackgroundTransparency = 1,  -- Прозрачная
         Size = UDim2.new(0, 60, 0, 20),  -- Та же ширина
         Position = UDim2.new(1, -48 - 60, 0.5, -10),  -- Та же позиция
         Parent = frame
@@ -1757,6 +1757,15 @@ function Library._CreateToggle(tab, config)
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = switchCircle
+    })
+
+    -- Добавляем button на frame для кликов на toggle (мышкой)
+    local button = CreateInstance("TextButton", {
+        Name = "Button",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = frame
     })
 
     local function UpdateToggle()
@@ -1810,37 +1819,20 @@ function Library._CreateToggle(tab, config)
         StartBinding()
     end)
 
-    -- Объединённая обработка InputBegan для клавиш и кликов
+    -- Клик на toggle (мышкой, на frame)
+    button.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        UpdateToggle()
+        callback(enabled)
+    end)
+
+    -- Обработка клавиш для toggling по keybind
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            -- Toggling по клавише
-            if currentKey and input.KeyCode == currentKey and not binding then
-                enabled = not enabled
-                UpdateToggle()
-                callback(enabled)
-            end
-        elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-            -- Проверка клика на toggle
-            local mousePos = UserInputService:GetMouseLocation()
-            local framePos = frame.AbsolutePosition
-            local frameSize = frame.AbsoluteSize
-            if mousePos.X >= framePos.X and mousePos.X <= framePos.X + frameSize.X and
-               mousePos.Y >= framePos.Y and mousePos.Y <= framePos.Y + frameSize.Y then
-                -- Клик внутри frame
-                local keybindPos = keybindButton.AbsolutePosition
-                local keybindSize = keybindButton.AbsoluteSize
-                if mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X and
-                   mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y then
-                    -- Клик на keybind, ничего не делать (биндинг обрабатывается отдельно)
-                    return
-                else
-                    -- Клик на toggle, переключить (даже если keybind есть или нет)
-                    enabled = not enabled
-                    UpdateToggle()
-                    callback(enabled)
-                end
-            end
+        if gameProcessed or binding then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard and currentKey and input.KeyCode == currentKey then
+            enabled = not enabled
+            UpdateToggle()
+            callback(enabled)
         end
     end)
 
