@@ -1721,52 +1721,54 @@ function Library._CreateToggle(tab, config)
         Parent = keybindButton
     })
 
-    local switchBg = CreateInstance("Frame", {
-        Name = "SwitchBackground",
-        BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled,
+    -- Новый квадратный хитбокс для toggle (замена switchBg)
+    local toggleBox = CreateInstance("Frame", {
+        Name = "ToggleBox",
+        BackgroundColor3 = c.Toggle.Disabled,  -- Тёмно-серый цвет
         Position = UDim2.new(1, -48, 0.5, -10),
         BorderSizePixel = 0,
         Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height),
         Parent = frame
     })
-    CreateCorner(switchBg, 100)
+    CreateCorner(toggleBox, 5)  -- Маленький corner
 
-    local switchCircle = CreateInstance("Frame", {
-        Name = "Circle",
-        BackgroundColor3 = c.Toggle.Circle,
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, s.Toggle.Circle, 0, s.Toggle.Circle),
-        Parent = switchBg
+    -- Галочка внутри toggleBox (появляется если enabled)
+    local checkmark = CreateInstance("TextLabel", {
+        Name = "Checkmark",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,  -- Цвет текста галочки
+        Text = "✓",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextScaled = true,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        Visible = enabled,  -- Видима только если включено
+        Parent = toggleBox
     })
-    CreateCorner(switchCircle, 100)
 
+    -- Кнопка для активации toggle (на toggleBox)
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleButton",
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = switchCircle
+        Parent = toggleBox
     })
 
-    -- Изменено: button теперь покрывает только левую часть, не перекрывая keybindButton и switchBg
+    -- Button для левой части (не перекрывает keybind и toggleBox)
     local button = CreateInstance("TextButton", {
         Name = "Button",
         Text = "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -120, 1, 0),  -- Не покрывает правую часть (keybind и toggle)
+        Size = UDim2.new(1, -120, 1, 0),  -- Не покрывает правую часть
         Parent = frame
     })
 
     local function UpdateToggle()
-        if enabled then
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 21, 0.5, 0)}, animationspeed.Normal)
-        else
-            CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Disabled}, animationspeed.Normal)
-            CreateTween(switchCircle, {Position = UDim2.new(0, 4, 0.5, 0)}, animationspeed.Normal)
-        end
+        checkmark.Visible = enabled  -- Показать/скрыть галочку
+        -- Цвет toggleBox остаётся постоянным (c.Toggle.Disabled)
     end
 
     -- Функция для обновления текста keybind
@@ -1818,7 +1820,7 @@ function Library._CreateToggle(tab, config)
         callback(enabled)
     end)
 
-    -- Клик на toggleBtn для переключения toggle
+    -- Клик на toggleBtn (на toggleBox) для переключения toggle
     toggleBtn.MouseButton1Click:Connect(function()
         if binding then return end  -- Не переключать, если в режиме биндинга
         enabled = not enabled
