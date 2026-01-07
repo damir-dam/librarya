@@ -1665,8 +1665,7 @@ function Library._CreateToggle(tab, config)
     local callback = config.Callback or function() end
     local flag = config.Flag
     local enabled = default
-    local keybind = nil -- сюда будем хранить привязанную клавишу, "None" означает ничего
-    
+
     local frame = CreateInstance("Frame", {
         Name = "Toggle_" .. name,
         BackgroundColor3 = c.Secondary,
@@ -1678,7 +1677,6 @@ function Library._CreateToggle(tab, config)
     CreateCorner(frame, 5)
     CreateStroke(frame)
 
-    -- Название
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
         FontFace = f.Regular,
@@ -1692,7 +1690,6 @@ function Library._CreateToggle(tab, config)
         Parent = frame
     })
 
-    -- Переключатель (сбоку)
     local switchBg = CreateInstance("Frame", {
         Name = "SwitchBackground",
         BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled,
@@ -1707,7 +1704,7 @@ function Library._CreateToggle(tab, config)
         Name = "Circle",
         BackgroundColor3 = c.Toggle.Circle,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0, 0.5),
+        Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, s.Toggle.Circle, 0, s.Toggle.Circle),
         Parent = switchBg
@@ -1730,76 +1727,6 @@ function Library._CreateToggle(tab, config)
         Parent = frame
     })
 
-    -- Keybind часть
-    local keybindFrame = CreateInstance("Frame", {
-        Name = "KeybindFrame",
-        BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.2,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 80, 0, 20),
-        Position = UDim2.new(0, 220, 0.5, -10),
-        Parent = frame
-    })
-    CreateCorner(keybindFrame, 5)
-
-    local keybindLabel = CreateInstance("TextLabel", {
-        Name = "KeyLabel",
-        Text = "None",
-        TextColor3 = c.Text,
-        TextSize = textsize.Normal,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        Parent = keybindFrame
-    })
-
-    -- Обработка нажатий для назначения клавиши
-    local assigningKey = false
-    local function updateKeyLabel()
-        if keybind then
-            keybindLabel.Text = keybind.Name
-        else
-            keybindLabel.Text = "None"
-        end
-    end
-
-    keybindFrame.MouseButton1Click:Connect(function()
-        assigningKey = true
-        keybindLabel.Text = "Press any key..."
-    end)
-
-    -- Для сброса при клике вне зоны Keybind
-    local UserInputService = game:GetService("UserInputService")
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed then
-            if assigningKey then
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    if input.KeyCode == Enum.KeyCode.Escape then
-                        -- Сбросить в None
-                        keybind = nil
-                        updateKeyLabel()
-                        assigningKey = false
-                    else
-                        -- Назначить клавишу
-                        keybind = {KeyCode = input.KeyCode, Name = input.KeyCode.Name}
-                        updateKeyLabel()
-                        assigningKey = false
-                    end
-                end
-            else
-                -- Проверка на нажатие привязанной клавиши для переключения
-                if keybind and input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == keybind.KeyCode then
-                    -- Переключить состояние
-                    enabled = not enabled
-                    UpdateToggle()
-                    callback(enabled)
-                end
-            end
-        end
-    end)
-
-    -- Обновление визуала при изменении
     local function UpdateToggle()
         if enabled then
             CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
@@ -1810,7 +1737,6 @@ function Library._CreateToggle(tab, config)
         end
     end
 
-    -- Обработчик клика по переключателю
     button.MouseButton1Click:Connect(function()
         enabled = not enabled
         UpdateToggle()
@@ -1825,15 +1751,6 @@ function Library._CreateToggle(tab, config)
         end,
         GetValue = function()
             return enabled
-        end,
-        -- Метод для сброса Keybind
-        ResetKeybind = function()
-            keybind = nil
-            updateKeyLabel()
-        end,
-        -- Метод для получения текущей привязанной клавиши
-        GetKeybind = function()
-            return keybind
         end
     }
 
@@ -1845,7 +1762,7 @@ function Library._CreateToggle(tab, config)
     end
 
     return methods
-end
+end 
 
 function Library._CreateDropdown(tab, config)
     local name = config.Name or "Dropdown"
