@@ -1665,96 +1665,104 @@ function Library._CreateToggle(tab, config)
     local callback = config.Callback or function() end
     local flag = config.Flag
     local enabled = default
-    local keybind = "None" -- по умолчанию клавиша None
-    local waitingForKey = false
-    
-    -- Создаем основной фрейм (уже есть)
-    local frame = -- текущий код создания frame...
+    local keybind = config.Keybind or {Default = nil, Callback = nil}
+    local currentKey = keybind.Default
+    local isListeningForKey = false
+    local keybindConnection = nil
 
-    -- Создаем Keybind кнопку/просто поле слева/рядом с toggle
-    local keybindButton = CreateInstance("TextButton", {
-        Name = "Keybind",
-        Text = keybind,
-        TextColor3 = c.Text,
+    local frame = CreateInstance("Frame", {
+        Name = "Toggle_" .. name,
         BackgroundColor3 = c.Secondary,
-        FontFace = f.Regular,
-        TextSize = textsize.Normal,
-        Size = UDim2.new(0, 50, 0, 20),
-        Position = UDim2.new(0, 10, 0.5, -10), -- или по месту в зависимости от дизайна
-        BackgroundTransparency = 0.3,
+        BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, s.Button.Height),
+        Parent = tab.content
+    })
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
+
+    local nameLabel = CreateInstance("TextLabel", {
+        Name = "Name",
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0.5, -10),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(0, 150, 0, 20),
         Parent = frame
     })
-    CreateCorner(keybindButton, 3)
-    CreateStroke(keybindButton)
-    
-    -- Создаем бинарный индикатор - это уже есть, например switchBg, switchCircle...
 
-    -- Функция чтобы обновлять отображение клавиши
-    local function UpdateKeybindDisplay()
-        keybindButton.Text = keybind
-    end
+    -- Keybind Frame
+    local keybindFrame = CreateInstance("Frame", {
+        Name = "KeybindFrame",
+        BackgroundColor3 = c.Keybind.Background,
+        BackgroundTransparency = 0.4,
+        Position = UDim2.new(0, 160, 0.5, -12),
+        Size = UDim2.new(0, 60, 0, 24),
+        Parent = frame
+    })
+    CreateCorner(keybindFrame, 4)
+    CreateStroke(keybindFrame, 1, c.Keybind.Border)
 
-    -- Обработка нажатий на кнопку Keybind
-    keybindButton.MouseButton1Click:Connect(function()
-        waitingForKey = true
-        keybindButton.Text = "Press any" -- или что-то, чтобы показывать режим назначения
-    end)
+    local keybindText = CreateInstance("TextLabel", {
+        Name = "KeybindText",
+        FontFace = f.Regular,
+        TextColor3 = c.Keybind.Text,
+        Text = currentKey and currentKey.Name or "None",
+        TextSize = textsize.Small,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = keybindFrame
+    })
 
-    -- Обработка нажатий клавиш глобально
-    game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and waitingForKey then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                if input.KeyCode == Enum.KeyCode.Escape then
-                    -- Назначение отменено, сброс
-                    keybind = "None"
-                    waitingForKey = false
-                    UpdateKeybindDisplay()
-                else
-                    -- Назначаем выбранную клавишу
-                    keybind = tostring(input.KeyCode.Name) -- например, "A", "LeftShift"
-                    waitingForKey = false
-                    UpdateKeybindDisplay()
-                end
-            end
-        end
-    end)
+    local keybindButton = CreateInstance("TextButton", {
+        Name = "KeybindButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = keybindFrame
+    })
 
-    -- Обработка клика вне зоны Keybind для сброса
-    game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and waitingForKey then
-            -- тут можно проверять, если клик вне панели
-            -- для этого потребуется рейка с глобальным нажатием, или можно использовать Mouse.Button1Click вне фрейма
-            -- упрощенно, можно смотреть позицию курсора
-            local mouse = game:GetService("UserInputService"):GetMouseLocation()
-            local mouseObj = game.Players.LocalPlayer:GetMouse()
-            local absPos = mouseObj:GetFocus().AbsolutePosition
-            local absSize = mouseObj:GetFocus().AbsoluteSize
-            local mouseX, mouseY = mouse.X, mouse.Y
+    -- Toggle Switch
+    local switchBg = CreateInstance("Frame", {
+        Name = "SwitchBackground",
+        BackgroundColor3 = enabled and c.Toggle.Enabled or c.Toggle.Disabled,
+        Position = UDim2.new(1, -48, 0.5, -10),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, s.Toggle.Width, 0, s.Toggle.Height),
+        Parent = frame
+    })
+    CreateCorner(switchBg, 100)
 
-            if not (absPos.X <= mouseX and mouseX <= absPos.X + absSize.X and
-                absPos.Y <= mouseY and mouseY <= absPos.Y + absSize.Y) then
-                -- клик вне фрейма
-                keybind = "None"
-                waitingForKey = false
-                UpdateKeybindDisplay()
-            end
-        end
-    end)
+    local switchCircle = CreateInstance("Frame", {
+        Name = "Circle",
+        BackgroundColor3 = c.Toggle.Circle,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, s.Toggle.Circle, 0, s.Toggle.Circle),
+        Parent = switchBg
+    })
+    CreateCorner(switchCircle, 100)
 
-    -- Обработать нажатие клавиши для активации/деактивации toggle
-    game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and keybind ~= "None" and not waitingForKey then
-            if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode[string.upper(keybind)] then
-                -- переключаем toggle
-                enabled = not enabled
-                UpdateToggle()
-                callback(enabled)
-            end
-        end
-    end)
+    local toggleBtn = CreateInstance("TextButton", {
+        Name = "ToggleButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = switchCircle
+    })
 
-    -- Обновление toggle
+    local button = CreateInstance("TextButton", {
+        Name = "Button",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = frame
+    })
+
     local function UpdateToggle()
         if enabled then
             CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
@@ -1765,14 +1773,125 @@ function Library._CreateToggle(tab, config)
         end
     end
 
-    -- Обработка клика по toggle
-    button.MouseButton1Click:Connect(function()
+    local function UpdateKeybindText()
+        keybindText.Text = currentKey and currentKey.Name or "None"
+    end
+
+    local function ToggleValue()
         enabled = not enabled
         UpdateToggle()
         callback(enabled)
+    end
+
+    local function StartKeybindListener()
+        if isListeningForKey then return end
+        
+        isListeningForKey = true
+        keybindText.Text = "..."
+        CreateTween(keybindFrame, {BackgroundColor3 = c.Keybind.Listening}, animationspeed.Normal)
+        
+        -- Создаем затемненный фрейм для отмены бинда
+        local cancelFrame = CreateInstance("ScreenGui", {
+            Name = "KeybindCancelFrame",
+            Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+        })
+        
+        local fullscreenButton = CreateInstance("TextButton", {
+            Name = "FullscreenButton",
+            Text = "",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Parent = cancelFrame
+        })
+        
+        local keyConnection
+        local mouseConnection
+        
+        local function CleanupListeners()
+            if keyConnection then
+                keyConnection:Disconnect()
+                keyConnection = nil
+            end
+            if mouseConnection then
+                mouseConnection:Disconnect()
+                mouseConnection = nil
+            end
+        end
+        
+        local function EndKeybindListening(newKey)
+            isListeningForKey = false
+            CleanupListeners()
+            cancelFrame:Destroy()
+            
+            CreateTween(keybindFrame, {BackgroundColor3 = c.Keybind.Background}, animationspeed.Normal)
+            
+            if newKey then
+                currentKey = newKey
+            else
+                currentKey = nil
+            end
+            
+            UpdateKeybindText()
+            
+            if keybind.Callback then
+                keybind.Callback(currentKey)
+            end
+        end
+        
+        -- Слушаем нажатие клавиш
+        keyConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    EndKeybindListening(nil)
+                else
+                    EndKeybindListening(input.KeyCode)
+                end
+            end
+        end)
+        
+        -- Слушаем клик вне keybind для отмены
+        mouseConnection = fullscreenButton.MouseButton1Click:Connect(function()
+            EndKeybindListening(nil)
+        end)
+        
+        -- Автоматическое отключение через 10 секунд
+        delay(10, function()
+            if isListeningForKey then
+                EndKeybindListening(nil)
+            end
+        end)
+    end
+
+    -- Обработчик клика по toggle
+    button.MouseButton1Click:Connect(function()
+        ToggleValue()
     end)
 
-    -- Методы
+    -- Обработчик клика по keybind
+    keybindButton.MouseButton1Click:Connect(function()
+        StartKeybindListener()
+    end)
+
+    -- Обработчик глобального нажатия клавиш для keybind
+    if keybindConnection then
+        keybindConnection:Disconnect()
+    end
+    
+    keybindConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if not currentKey then return end
+        
+        if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == currentKey then
+            ToggleValue()
+        end
+    end)
+
+    -- Инициализация
+    UpdateToggle()
+    UpdateKeybindText()
+
     local methods = {
         SetValue = function(_, value)
             enabled = value
@@ -1782,12 +1901,20 @@ function Library._CreateToggle(tab, config)
         GetValue = function()
             return enabled
         end,
-        GetKeybind = function()
-            return keybind
+        SetKeybind = function(_, key)
+            if key == Enum.KeyCode.Escape or key == nil then
+                currentKey = nil
+            else
+                currentKey = key
+            end
+            UpdateKeybindText()
+            
+            if keybind.Callback then
+                keybind.Callback(currentKey)
+            end
         end,
-        SetKeybind = function(_, newKey)
-            keybind = newKey or "None"
-            UpdateKeybindDisplay()
+        GetKeybind = function()
+            return currentKey
         end
     }
 
@@ -1796,11 +1923,22 @@ function Library._CreateToggle(tab, config)
             function() return enabled end,
             function(value) methods:SetValue(value) end
         )
-        tab._library:_RegisterConfigElement(flag.."_Keybind", "Keybind", 
-            function() return keybind end,
-            function(val) methods:SetKeybind(val) end
-        )
+        
+        -- Регистрация keybind в конфиге
+        if keybind.Flag then
+            tab._library:_RegisterConfigElement(keybind.Flag, "Keybind",
+                function() return currentKey end,
+                function(value) methods:SetKeybind(value) end
+            )
+        end
     end
+
+    -- Очистка соединений при уничтожении
+    frame.Destroying:Connect(function()
+        if keybindConnection then
+            keybindConnection:Disconnect()
+        end
+    end)
 
     return methods
 end
