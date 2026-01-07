@@ -1694,19 +1694,20 @@ function Library._CreateToggle(tab, config)
         Parent = frame
     })
 
-    -- Фон для keybind (теперь Frame, не TextButton)
-    local keybindBg = CreateInstance("Frame", {
-        Name = "KeybindBackground",
+    -- Keybind button (теперь TextButton с фоном, corner и stroke)
+    local keybindButton = CreateInstance("TextButton", {
+        Name = "KeybindButton",
+        Text = "",
         BackgroundColor3 = Color3.fromRGB(128, 0, 0),  -- Темно-красный (maroon)
         BackgroundTransparency = 0,
         Size = UDim2.new(0, 60, 0, 20),  -- Ширина 60 для длинных текстов
         Position = UDim2.new(1, -48 - 60, 0.5, -10),  -- Правее
         Parent = frame
     })
-    CreateCorner(keybindBg, 5)  -- UICorner
-    CreateStroke(keybindBg)  -- Обводка
+    CreateCorner(keybindButton, 5)  -- UICorner
+    CreateStroke(keybindButton)  -- Обводка
 
-    -- Keybind label (текст для отображения клавиши, поверх фона)
+    -- Keybind label (текст для отображения клавиши, поверх button)
     local keybindLabel = CreateInstance("TextLabel", {
         Name = "Keybind",
         FontFace = f.Regular,
@@ -1715,9 +1716,9 @@ function Library._CreateToggle(tab, config)
         TextXAlignment = Enum.TextXAlignment.Center,
         TextScaled = true,  -- Масштабирует текст, чтобы помещался
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 0),  -- Поверх фона
-        Size = UDim2.new(1, 0, 1, 0),  -- Полный размер фона
-        Parent = keybindBg
+        Position = UDim2.new(0, 0, 0, 0),  -- Поверх button
+        Size = UDim2.new(1, 0, 1, 0),  -- Полный размер button
+        Parent = keybindButton
     })
 
     local switchBg = CreateInstance("Frame", {
@@ -1790,8 +1791,8 @@ function Library._CreateToggle(tab, config)
             elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
                 -- Если клик вне зоны keybind, отменить
                 local mouse = UserInputService:GetMouseLocation()
-                local keybindPos = keybindBg.AbsolutePosition
-                local keybindSize = keybindBg.AbsoluteSize
+                local keybindPos = keybindButton.AbsolutePosition
+                local keybindSize = keybindButton.AbsoluteSize
                 if mouse.X < keybindPos.X or mouse.X > keybindPos.X + keybindSize.X or
                    mouse.Y < keybindPos.Y or mouse.Y > keybindPos.Y + keybindSize.Y then
                     currentKey = nil
@@ -1803,21 +1804,16 @@ function Library._CreateToggle(tab, config)
         end)
     end
 
-    -- Клик на button (весь frame), проверяем позицию
+    -- Клик на keybind для начала биндинга
+    keybindButton.MouseButton1Click:Connect(function()
+        StartBinding()
+    end)
+
+    -- Клик на toggle (мышкой, на frame)
     button.MouseButton1Click:Connect(function()
-        local mousePos = UserInputService:GetMouseLocation()
-        local keybindPos = keybindBg.AbsolutePosition
-        local keybindSize = keybindBg.AbsoluteSize
-        if mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X and
-           mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y then
-            -- Клик на keybind, начать биндинг
-            StartBinding()
-        else
-            -- Клик на toggle, переключить
-            enabled = not enabled
-            UpdateToggle()
-            callback(enabled)
-        end
+        enabled = not enabled
+        UpdateToggle()
+        callback(enabled)
     end)
 
     -- Обработка клавиш для toggling по keybind
