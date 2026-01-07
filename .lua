@@ -1702,7 +1702,7 @@ function Library._CreateToggle(tab, config)
         Text = "None",
         TextXAlignment = Enum.TextXAlignment.Center,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -48 - 50, 0.5, -10),  -- Слева от switchBg, предположим ширину 50
+        Position = UDim2.new(1, -48 - 50, 0.5, -10),  -- Слева от switchBg, ширина 40
         TextSize = textsize.Normal,
         Size = UDim2.new(0, 40, 0, 20),
         Parent = frame
@@ -1747,13 +1747,7 @@ function Library._CreateToggle(tab, config)
         Parent = switchCircle
     })
 
-    local button = CreateInstance("TextButton", {
-        Name = "Button",
-        Text = "",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = frame
-    })
+    -- Убираем старый button, теперь будем использовать UserInputService для кликов
 
     local function UpdateToggle()
         if enabled then
@@ -1813,16 +1807,36 @@ function Library._CreateToggle(tab, config)
     -- Подключение к UserInputService для клавиш
     UserInputService.InputBegan:Connect(OnKeyPressed)
 
-    button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        UpdateToggle()
-        callback(enabled)
-    end)
-
     -- Клик на keybind для начала биндинга
     keybindButton.MouseButton1Click:Connect(function()
         if not binding then
             StartBinding()
+        end
+    end)
+
+    -- Обработка кликов на toggle (весь frame, кроме keybind)
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed or binding then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = UserInputService:GetMouseLocation()
+            local framePos = frame.AbsolutePosition
+            local frameSize = frame.AbsoluteSize
+            if mousePos.X >= framePos.X and mousePos.X <= framePos.X + frameSize.X and
+               mousePos.Y >= framePos.Y and mousePos.Y <= framePos.Y + frameSize.Y then
+                -- Клик внутри frame
+                local keybindPos = keybindButton.AbsolutePosition
+                local keybindSize = keybindButton.AbsoluteSize
+                if mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X and
+                   mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y then
+                    -- Клик на keybind, ничего не делать (биндинг обрабатывается отдельно)
+                    return
+                else
+                    -- Клик на toggle, переключить
+                    enabled = not enabled
+                    UpdateToggle()
+                    callback(enabled)
+                end
+            end
         end
     end)
 
@@ -1835,7 +1849,7 @@ function Library._CreateToggle(tab, config)
         GetValue = function()
             return enabled
         end,
-        -- Добавляем методы для keybind, если нужно
+        -- Добавляем методы для keybind
         SetKeybind = function(_, key)
             currentKey = key
             UpdateKeybindText()
@@ -1850,7 +1864,7 @@ function Library._CreateToggle(tab, config)
             function() return enabled end,
             function(value) methods:SetValue(value) end
         )
-        -- Можно добавить сохранение keybind, но пользователь не указал, так что опционально
+        -- Для keybind можно добавить сохранение, если нужно
     end
 
     return methods
