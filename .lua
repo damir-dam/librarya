@@ -1694,7 +1694,7 @@ function Library._CreateToggle(tab, config)
         Parent = frame
     })
 
-    -- Keybind button (теперь TextButton с фоном, corner и stroke)
+    -- Keybind button (TextButton с фоном, corner и stroke)
     local keybindButton = CreateInstance("TextButton", {
         Name = "KeybindButton",
         Text = "",
@@ -1750,14 +1750,6 @@ function Library._CreateToggle(tab, config)
         Parent = switchCircle
     })
 
-    local button = CreateInstance("TextButton", {
-        Name = "Button",
-        Text = "",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = frame
-    })
-
     local function UpdateToggle()
         if enabled then
             CreateTween(switchBg, {BackgroundColor3 = c.Toggle.Enabled}, animationspeed.Normal)
@@ -1809,17 +1801,31 @@ function Library._CreateToggle(tab, config)
         StartBinding()
     end)
 
-    -- Клик на toggle (мышкой, на frame)
-    button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        UpdateToggle()
-        callback(enabled)
-    end)
-
-    -- Обработка клавиш для toggling по keybind
+    -- Обработка кликов мышкой через UserInputService
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed or binding then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard and currentKey and input.KeyCode == currentKey then
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = UserInputService:GetMouseLocation()
+            local framePos = frame.AbsolutePosition
+            local frameSize = frame.AbsoluteSize
+            if mousePos.X >= framePos.X and mousePos.X <= framePos.X + frameSize.X and
+               mousePos.Y >= framePos.Y and mousePos.Y <= framePos.Y + frameSize.Y then
+                -- Клик внутри frame
+                local keybindPos = keybindButton.AbsolutePosition
+                local keybindSize = keybindButton.AbsoluteSize
+                if mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X and
+                   mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y then
+                    -- Клик на keybind, ничего не делать (биндинг обрабатывается отдельно)
+                    return
+                else
+                    -- Клик на toggle, переключить
+                    enabled = not enabled
+                    UpdateToggle()
+                    callback(enabled)
+                end
+            end
+        elseif input.UserInputType == Enum.UserInputType.Keyboard and currentKey and input.KeyCode == currentKey and not binding then
+            -- Toggling по клавише
             enabled = not enabled
             UpdateToggle()
             callback(enabled)
