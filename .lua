@@ -1701,7 +1701,7 @@ function Library._CreateToggle(tab, config)
         BackgroundColor3 = Color3.fromRGB(128, 0, 0),  -- Темно-красный (maroon)
         BackgroundTransparency = 0,
         Size = UDim2.new(0, 60, 0, 20),  -- Ширина 60 для длинных текстов
-        Position = UDim2.new(1, -72, 0.5, -10),  -- Правее с расстоянием 10 пикселей от toggleBox
+        Position = UDim2.new(1, -18, 0.5, -10),
         Parent = frame
     })
     CreateCorner(keybindButton, 5)  -- UICorner
