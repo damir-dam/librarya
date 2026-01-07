@@ -1702,21 +1702,24 @@ function Library._CreateToggle(tab, config)
         Text = "None",
         TextXAlignment = Enum.TextXAlignment.Center,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -48 - 50, 0.5, -10),  -- Слева от switchBg, ширина 40
+        Position = UDim2.new(1, -48 - 55, 0.5, -10),  -- Немного правее (изменено с -50 на -45)
         TextSize = textsize.Normal,
         Size = UDim2.new(0, 40, 0, 20),
         Parent = frame
     })
 
-    -- Кнопка для клика на keybind (невидимая, покрывает label)
+    -- Кнопка для клика на keybind (теперь с фоном maroon, corner и stroke для красоты)
     local keybindButton = CreateInstance("TextButton", {
         Name = "KeybindButton",
         Text = "",
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0,  -- Видимый фон
+        BackgroundColor3 = Color3.fromRGB(128, 0, 0),  -- Темно-красный (maroon)
         Size = UDim2.new(0, 40, 0, 20),
-        Position = UDim2.new(1, -48 - 50, 0.5, -10),
+        Position = UDim2.new(1, -48 - 45, 0.5, -10),  -- То же положение
         Parent = frame
     })
+    CreateCorner(keybindButton, 5)  -- UICorner для скругления
+    CreateStroke(keybindButton)  -- Обводка
 
     local switchBg = CreateInstance("Frame", {
         Name = "SwitchBackground",
@@ -1746,8 +1749,6 @@ function Library._CreateToggle(tab, config)
         Size = UDim2.new(1, 0, 1, 0),
         Parent = switchCircle
     })
-
-    -- Убираем старый button, теперь будем использовать UserInputService для кликов
 
     local function UpdateToggle()
         if enabled then
