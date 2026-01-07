@@ -1750,11 +1750,12 @@ function Library._CreateToggle(tab, config)
         Parent = switchCircle
     })
 
+    -- Изменено: button теперь покрывает только левую часть, не перекрывая keybindButton и switchBg
     local button = CreateInstance("TextButton", {
         Name = "Button",
         Text = "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
+        Size = UDim2.new(1, -120, 1, 0),  -- Не покрывает правую часть (keybind и toggle)
         Parent = frame
     })
 
@@ -1809,8 +1810,17 @@ function Library._CreateToggle(tab, config)
         StartBinding()
     end)
 
-    -- Клик на button (весь frame) для переключения toggle
+    -- Клик на button (левая часть) для переключения toggle
     button.MouseButton1Click:Connect(function()
+        if binding then return end  -- Не переключать, если в режиме биндинга
+        enabled = not enabled
+        UpdateToggle()
+        callback(enabled)
+    end)
+
+    -- Клик на toggleBtn для переключения toggle
+    toggleBtn.MouseButton1Click:Connect(function()
+        if binding then return end  -- Не переключать, если в режиме биндинга
         enabled = not enabled
         UpdateToggle()
         callback(enabled)
