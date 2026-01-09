@@ -1951,6 +1951,27 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
+    -- Search Box
+    local searchBox = CreateInstance("TextBox", {
+        Name = "SearchBox",
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.04,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -145, 0, 38),
+        Size = UDim2.new(0, 135, 0, 20),
+        Visible = false,
+        ZIndex = 100,
+        Text = "",
+        PlaceholderText = "Search...",
+        TextColor3 = c.Text,
+        FontFace = f.Regular,
+        TextSize = textsize.Small,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = frame
+    })
+    CreateCorner(searchBox, 5)
+    CreateStroke(searchBox)
+
     local maxVisibleOptions = 5
     local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
 
@@ -1958,7 +1979,7 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 38),
+        Position = UDim2.new(1, -145, 0, 60), -- Adjusted position due to search box
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, totalOptionsHeight),
         Visible = false,
@@ -1982,12 +2003,29 @@ function Library._CreateDropdown(tab, config)
     })
     CreateListLayout(optionsScroll, 0, Enum.SortOrder.LayoutOrder)
 
+    local allOptionButtons = {}
+
     local function UpdateSelectedText()
         if multiSelect then
             selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
         else
             selectedLabel.Text = tostring(selected)
         end
+    end
+
+    local function FilterOptions(text)
+        for _, btn in pairs(allOptionButtons) do
+            local match = string.find(string.lower(btn.Text), string.lower(text))
+            btn.Visible = (match ~= nil) or (text == "")
+        end
+        -- Recalculate canvas size after filtering
+        local visibleCount = 0
+        for _, btn in pairs(allOptionButtons) do
+            if btn.Visible then
+                visibleCount = visibleCount + 1
+            end
+        end
+        optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * s.Dropdown.OptionHeight)
     end
 
     local function CreateOptionButton(option)
@@ -2029,17 +2067,23 @@ function Library._CreateDropdown(tab, config)
                 callback(selected)
                 expanded = false
                 optionsContainer.Visible = false
+                searchBox.Visible = false
                 CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
                 frame.ZIndex = 1
             end
         end)
 
+        allOptionButtons[#allOptionButtons + 1] = optionBtn
         return optionBtn
     end
 
     for _, option in ipairs(options) do
         CreateOptionButton(option)
     end
+
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        FilterOptions(searchBox.Text)
+    end)
 
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleBtn",
@@ -2053,8 +2097,12 @@ function Library._CreateDropdown(tab, config)
     toggleBtn.MouseButton1Click:Connect(function()
         expanded = not expanded
         optionsContainer.Visible = expanded
+        searchBox.Visible = expanded
         CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
         frame.ZIndex = expanded and 10 or 1
+        if not expanded then
+            searchBox.Text = ""
+        end
     end)
 
     local methods = {
@@ -2077,6 +2125,7 @@ function Library._CreateDropdown(tab, config)
                     child:Destroy()
                 end
             end
+            allOptionButtons = {}
             for _, option in ipairs(options) do
                 CreateOptionButton(option)
             end
@@ -2095,6 +2144,7 @@ function Library._CreateDropdown(tab, config)
 
     return methods
 end
+
 
 function Library._CreateKeybind(tab, config, lib)
     local name = config.Name or "Keybind"
