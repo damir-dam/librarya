@@ -1882,11 +1882,6 @@ function Library._CreateDropdown(tab, config)
     local SELECTED_TEXT_COLOR = Color3.fromRGB(139, 0, 0)  -- Темно-красный текст
     local SELECTED_BG_COLOR = Color3.fromRGB(40, 0, 0)     -- Очень темный красный фон
     
-    -- Инициализируем таблицу для отслеживания открытых dropdown'ов
-    if not Library._OpenDropdowns then
-        Library._OpenDropdowns = {}
-    end
-    
     if multiSelect and type(default) == "table" then
         selected = default
     elseif multiSelect then
@@ -2014,6 +2009,11 @@ function Library._CreateDropdown(tab, config)
     
     local allOptionButtons = {}
     
+    -- Таблица для отслеживания открытых dropdown'ов
+    if not Library._OpenDropdowns then
+        Library._OpenDropdowns = {}
+    end
+    
     -- Функция для обновления текста выбранных элементов
     local function UpdateSelectedText()
         if multiSelect then
@@ -2067,19 +2067,24 @@ function Library._CreateDropdown(tab, config)
         optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * s.Dropdown.OptionHeight)
     end
     
-    -- Функция для открытия dropdown'а
-    local function OpenDropdown()
-        if expanded then return end
-        
-        -- Закрываем все другие открытые dropdown'ы
+    -- Функция для закрытия всех открытых dropdown'ов
+    local function CloseAllDropdowns()
         for dropdownFrame, closeFunc in pairs(Library._OpenDropdowns) do
             if dropdownFrame ~= frame and closeFunc and type(closeFunc) == "function" then
                 closeFunc()
             end
         end
+    end
+    
+    -- Функция для открытия dropdown'а
+    local function OpenDropdown()
+        if expanded then return end
+        
+        -- Закрываем все другие dropdown'ы
+        CloseAllDropdowns()
         
         expanded = true
-        frame.ZIndex = 10
+        frame.ZIndex = 100
         
         -- Показываем элементы
         optionsContainer.Visible = true
@@ -2108,13 +2113,14 @@ function Library._CreateDropdown(tab, config)
         CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal)
         
         -- Ждем окончания анимации и скрываем элементы
-        wait(animationspeed.Normal)
-        if not expanded then
-            optionsContainer.Visible = false
-            searchBox.Visible = false
-            searchBox.Text = ""
-            FilterOptions("")
-        end
+        delay(animationspeed.Normal, function()
+            if not expanded then
+                optionsContainer.Visible = false
+                searchBox.Visible = false
+                searchBox.Text = ""
+                FilterOptions("")
+            end
+        end)
         
         -- Удаляем из таблицы открытых dropdown'ов
         Library._OpenDropdowns[frame] = nil
@@ -2254,17 +2260,14 @@ function Library._CreateDropdown(tab, config)
     
     -- Закрытие dropdown'а при клике вне его
     local function HandleOutsideClick(input)
-        if expanded and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and expanded then
             local mousePos = game:GetService("UserInputService"):GetMouseLocation()
-            local absolutePosition = frame.AbsolutePosition
-            local absoluteSize = frame.AbsoluteSize
-            local dropdownBottom = absolutePosition.Y + absoluteSize.Y + totalOptionsHeight + 60
+            local framePos = frame.AbsolutePosition
+            local frameSize = frame.AbsoluteSize
             
             -- Проверяем, находится ли клик вне dropdown'а
-            if mousePos.X < absolutePosition.X - 10 or 
-               mousePos.X > absolutePosition.X + absoluteSize.X + 10 or
-               mousePos.Y < absolutePosition.Y - 10 or 
-               mousePos.Y > dropdownBottom + 10 then
+            if mousePos.X < framePos.X or mousePos.X > framePos.X + frameSize.X or
+               mousePos.Y < framePos.Y or mousePos.Y > framePos.Y + frameSize.Y + totalOptionsHeight + 60 then
                 CloseDropdown()
             end
         end
