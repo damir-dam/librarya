@@ -1979,9 +1979,9 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 60),
+        Position = UDim2.new(1, -145, 0, 60), -- Adjusted position due to search box
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, 0),
+        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
@@ -2013,33 +2013,12 @@ function Library._CreateDropdown(tab, config)
         end
     end
 
-    local function HighlightSelected()
-        for _, btn in pairs(allOptionButtons) do
-            if multiSelect then
-                if table.find(selected, btn.Text) then
-                    btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
-                    btn.BackgroundTransparency = 0.3
-                else
-                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                    btn.BackgroundTransparency = 1
-                end
-            else
-                if btn.Text == selected then
-                    btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
-                    btn.BackgroundTransparency = 0.3
-                else
-                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                    btn.BackgroundTransparency = 1
-                end
-            end
-        end
-    end
-
     local function FilterOptions(text)
         for _, btn in pairs(allOptionButtons) do
             local match = string.find(string.lower(btn.Text), string.lower(text))
             btn.Visible = (match ~= nil) or (text == "")
         end
+        -- Recalculate canvas size after filtering
         local visibleCount = 0
         for _, btn in pairs(allOptionButtons) do
             if btn.Visible then
@@ -2065,15 +2044,11 @@ function Library._CreateDropdown(tab, config)
         })
 
         optionBtn.MouseEnter:Connect(function()
-            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(139, 0, 0) then
-                CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
-            end
+            CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(139, 0, 0) then
-                CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
-            end
+            CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -2086,13 +2061,24 @@ function Library._CreateDropdown(tab, config)
                 end
                 UpdateSelectedText()
                 callback(selected)
-                HighlightSelected()
             else
                 selected = option
                 UpdateSelectedText()
                 callback(selected)
-                HighlightSelected()
-                methods.Close()
+                expanded = false
+                optionsContainer.Visible = false
+                searchBox.Visible = false
+                CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+                frame.ZIndex = 1
+            end
+            
+            -- Highlight selected options
+            for _, btn in pairs(allOptionButtons) do
+                if multiSelect and table.find(selected, btn.Text) or not multiSelect and btn.Text == selected then
+                    CreateTween(btn, {BackgroundColor3 = Color3.fromRGB(139, 0, 0)}, animationspeed.Normal) -- Dark red
+                else
+                    CreateTween(btn, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}, animationspeed.Normal)
+                end
             end
         end)
 
@@ -2101,7 +2087,11 @@ function Library._CreateDropdown(tab, config)
     end
 
     for _, option in ipairs(options) do
-        CreateOptionButton(option)
+        local btn = CreateOptionButton(option)
+        -- Initial highlight check
+        if multiSelect and table.find(selected, option) or not multiSelect and option == selected then
+            btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0) -- Dark red
+        end
     end
 
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
@@ -2117,15 +2107,42 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
-    local function CloseOthers()
-        for _, other in pairs(Library._dropdowns or {}) do
-            if other ~= methods and other.Close then
-                other:Close()
+    toggleBtn.MouseButton1Click:Connect(function()
+        expanded = not expanded
+        
+        -- Close other dropdowns
+        if expanded then
+            for _, otherTab in pairs(tab._library.Tabs) do
+                for _, element in pairs(otherTab.Elements) do
+                    if element.Type == "Dropdown" and element.Methods ~= methods then
+                        element.Methods:SetExpanded(false)
+                    end
+                end
             end
         end
-    end
+        
+        -- Animate container visibility
+        if expanded then
+            optionsContainer.Visible = true
+            searchBox.Visible = true
+            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
+            CreateTween(optionsContainer, {BackgroundTransparency = 0.04}, animationspeed.Normal)
+        else
+            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal, function()
+                optionsContainer.Visible = false
+                searchBox.Visible = false
+            end)
+            CreateTween(optionsContainer, {BackgroundTransparency = 1}, animationspeed.Normal)
+        end
+        
+        CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
+        frame.ZIndex = expanded and 10 or 1
+        if not expanded then
+            searchBox.Text = ""
+        end
+    end)
 
-    methods = {
+    local methods = {
         SetValue = function(_, value)
             if multiSelect and type(value) == "table" then
                 selected = value
@@ -2134,10 +2151,39 @@ function Library._CreateDropdown(tab, config)
             end
             UpdateSelectedText()
             callback(selected)
-            HighlightSelected()
+            
+            -- Update button highlights
+            for _, btn in pairs(allOptionButtons) do
+                if multiSelect and table.find(selected, btn.Text) or not multiSelect and btn.Text == selected then
+                    CreateTween(btn, {BackgroundColor3 = Color3.fromRGB(139, 0, 0)}, animationspeed.Normal) -- Dark red
+                else
+                    CreateTween(btn, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}, animationspeed.Normal)
+                end
+            end
         end,
         GetValue = function()
             return selected
+        end,
+        SetExpanded = function(_, state)
+            if expanded == state then return end
+            expanded = state
+            if expanded then
+                optionsContainer.Visible = true
+                searchBox.Visible = true
+                CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
+                CreateTween(optionsContainer, {BackgroundTransparency = 0.04}, animationspeed.Normal)
+            else
+                CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal, function()
+                    optionsContainer.Visible = false
+                    searchBox.Visible = false
+                end)
+                CreateTween(optionsContainer, {BackgroundTransparency = 1}, animationspeed.Normal)
+            end
+            CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
+            frame.ZIndex = expanded and 10 or 1
+            if not expanded then
+                searchBox.Text = ""
+            end
         end,
         Refresh = function(_, newOptions)
             options = newOptions
@@ -2148,48 +2194,17 @@ function Library._CreateDropdown(tab, config)
             end
             allOptionButtons = {}
             for _, option in ipairs(options) do
-                CreateOptionButton(option)
+                local btn = CreateOptionButton(option)
+                -- Reapply highlights after refresh
+                if multiSelect and table.find(selected, option) or not multiSelect and option == selected then
+                    btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0) -- Dark red
+                end
             end
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
             optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
-        end,
-        Open = function()
-            CloseOthers()
-            expanded = true
-            frame.ZIndex = 10
-            searchBox.Visible = true
-            optionsContainer.Visible = true
-            CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
-            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
-        end,
-        Close = function()
-            expanded = false
-            CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
-            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal, function()
-                optionsContainer.Visible = false
-                searchBox.Visible = false
-                frame.ZIndex = 1
-                searchBox.Text = ""
-            end)
         end
     }
-
-    toggleBtn.MouseButton1Click:Connect(function()
-        if expanded then
-            methods.Close()
-        else
-            methods.Open()
-        end
-    end)
-
-    HighlightSelected()
-    UpdateSelectedText()
-
-    if not Library._dropdowns then
-        Library._dropdowns = {}
-    end
-    table.insert(Library._dropdowns, methods)
 
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Dropdown", 
@@ -2200,6 +2215,7 @@ function Library._CreateDropdown(tab, config)
 
     return methods
 end
+
 
 
 function Library._CreateKeybind(tab, config, lib)
