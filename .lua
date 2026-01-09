@@ -1878,10 +1878,11 @@ function Library._CreateDropdown(tab, config)
     local selected = multiSelect and {} or default
     local expanded = false
     
-    -- Цвет для выбранных элементов (темно-красный)
-    local SELECTED_COLOR = Color3.fromRGB(139, 0, 0)
+    -- Цвета для выбранных элементов
+    local SELECTED_TEXT_COLOR = Color3.fromRGB(139, 0, 0)  -- Темно-красный текст
+    local SELECTED_BG_COLOR = Color3.fromRGB(40, 0, 0)     -- Очень темный красный фон
     
-    -- Таблица для отслеживания открытых dropdown'ов
+    -- Инициализируем таблицу для отслеживания открытых dropdown'ов
     if not Library._OpenDropdowns then
         Library._OpenDropdowns = {}
     end
@@ -1966,7 +1967,7 @@ function Library._CreateDropdown(tab, config)
         BackgroundTransparency = 0.04,
         BorderSizePixel = 0,
         Position = UDim2.new(1, -145, 0, 38),
-        Size = UDim2.new(0, 135, 0, 0), -- Начальный размер 0
+        Size = UDim2.new(0, 135, 0, 20),
         Visible = false,
         ZIndex = 100,
         Text = "",
@@ -1989,7 +1990,7 @@ function Library._CreateDropdown(tab, config)
         BackgroundTransparency = 0.04,
         Position = UDim2.new(1, -145, 0, 60),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, 0), -- Начальный размер 0
+        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
@@ -2013,16 +2014,6 @@ function Library._CreateDropdown(tab, config)
     
     local allOptionButtons = {}
     
-    -- Функция для закрытия всех открытых dropdown'ов
-    local function CloseAllDropdowns()
-        for dropdownId, closeFunc in pairs(Library._OpenDropdowns) do
-            if closeFunc and type(closeFunc) == "function" then
-                closeFunc()
-            end
-        end
-        Library._OpenDropdowns = {}
-    end
-    
     -- Функция для обновления текста выбранных элементов
     local function UpdateSelectedText()
         if multiSelect then
@@ -2037,15 +2028,23 @@ function Library._CreateDropdown(tab, config)
         for _, btn in pairs(allOptionButtons) do
             if multiSelect then
                 if table.find(selected, btn.Text) then
-                    btn.TextColor3 = SELECTED_COLOR
+                    btn.TextColor3 = SELECTED_TEXT_COLOR
+                    btn.BackgroundColor3 = SELECTED_BG_COLOR
+                    btn.BackgroundTransparency = 0
                 else
                     btn.TextColor3 = c.Text
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
                 end
             else
                 if btn.Text == tostring(selected) then
-                    btn.TextColor3 = SELECTED_COLOR
+                    btn.TextColor3 = SELECTED_TEXT_COLOR
+                    btn.BackgroundColor3 = SELECTED_BG_COLOR
+                    btn.BackgroundTransparency = 0
                 else
                     btn.TextColor3 = c.Text
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
                 end
             end
         end
@@ -2072,8 +2071,12 @@ function Library._CreateDropdown(tab, config)
     local function OpenDropdown()
         if expanded then return end
         
-        -- Закрываем все другие dropdown'ы
-        CloseAllDropdowns()
+        -- Закрываем все другие открытые dropdown'ы
+        for dropdownFrame, closeFunc in pairs(Library._OpenDropdowns) do
+            if dropdownFrame ~= frame and closeFunc and type(closeFunc) == "function" then
+                closeFunc()
+            end
+        end
         
         expanded = true
         frame.ZIndex = 10
@@ -2087,14 +2090,7 @@ function Library._CreateDropdown(tab, config)
         
         -- Анимация открытия
         CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
-        CreateTween(searchBox, {
-            Size = UDim2.new(0, 135, 0, 20),
-            BackgroundTransparency = 0.04
-        }, animationspeed.Normal)
-        CreateTween(optionsContainer, {
-            Size = UDim2.new(0, 135, 0, totalOptionsHeight),
-            BackgroundTransparency = 0.04
-        }, animationspeed.Normal)
+        CreateTween(optionsContainer, {Position = UDim2.new(1, -145, 0, 60), Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
         
         -- Добавляем в таблицу открытых dropdown'ов
         Library._OpenDropdowns[frame] = CloseDropdown
@@ -2109,14 +2105,7 @@ function Library._CreateDropdown(tab, config)
         
         -- Анимация закрытия
         CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
-        CreateTween(searchBox, {
-            Size = UDim2.new(0, 135, 0, 0),
-            BackgroundTransparency = 1
-        }, animationspeed.Normal)
-        CreateTween(optionsContainer, {
-            Size = UDim2.new(0, 135, 0, 0),
-            BackgroundTransparency = 1
-        }, animationspeed.Normal)
+        CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal)
         
         -- Ждем окончания анимации и скрываем элементы
         wait(animationspeed.Normal)
@@ -2150,20 +2139,48 @@ function Library._CreateDropdown(tab, config)
         -- Устанавливаем начальный цвет
         if multiSelect then
             if table.find(selected, option) then
-                optionBtn.TextColor3 = SELECTED_COLOR
+                optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                optionBtn.BackgroundTransparency = 0
             end
         else
             if option == selected then
-                optionBtn.TextColor3 = SELECTED_COLOR
+                optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                optionBtn.BackgroundTransparency = 0
             end
         end
         
         optionBtn.MouseEnter:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+            if multiSelect then
+                if table.find(selected, option) then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+                end
+            else
+                if option == selected then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+                end
+            end
         end)
         
         optionBtn.MouseLeave:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+            if multiSelect then
+                if table.find(selected, option) then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                end
+            else
+                if option == selected then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                end
+            end
         end)
         
         optionBtn.MouseButton1Click:Connect(function()
@@ -2172,9 +2189,13 @@ function Library._CreateDropdown(tab, config)
                 if index then
                     table.remove(selected, index)
                     optionBtn.TextColor3 = c.Text
+                    optionBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
                 else
                     table.insert(selected, option)
-                    optionBtn.TextColor3 = SELECTED_COLOR
+                    optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                    optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
                 end
                 UpdateSelectedText()
                 callback(selected)
@@ -2182,9 +2203,13 @@ function Library._CreateDropdown(tab, config)
                 -- Обновляем цвета всех кнопок
                 for _, btn in pairs(allOptionButtons) do
                     if btn.Text == option then
-                        btn.TextColor3 = SELECTED_COLOR
+                        btn.TextColor3 = SELECTED_TEXT_COLOR
+                        btn.BackgroundColor3 = SELECTED_BG_COLOR
+                        CreateTween(btn, {BackgroundTransparency = 0}, animationspeed.Fast)
                     else
                         btn.TextColor3 = c.Text
+                        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                        CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
                     end
                 end
                 
@@ -2233,12 +2258,13 @@ function Library._CreateDropdown(tab, config)
             local mousePos = game:GetService("UserInputService"):GetMouseLocation()
             local absolutePosition = frame.AbsolutePosition
             local absoluteSize = frame.AbsoluteSize
+            local dropdownBottom = absolutePosition.Y + absoluteSize.Y + totalOptionsHeight + 60
             
             -- Проверяем, находится ли клик вне dropdown'а
-            if mousePos.X < absolutePosition.X or 
-               mousePos.X > absolutePosition.X + absoluteSize.X or
-               mousePos.Y < absolutePosition.Y or 
-               mousePos.Y > absolutePosition.Y + absoluteSize.Y + totalOptionsHeight + 60 then
+            if mousePos.X < absolutePosition.X - 10 or 
+               mousePos.X > absolutePosition.X + absoluteSize.X + 10 or
+               mousePos.Y < absolutePosition.Y - 10 or 
+               mousePos.Y > dropdownBottom + 10 then
                 CloseDropdown()
             end
         end
