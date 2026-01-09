@@ -24,7 +24,7 @@ local c = {
     Notification = {
         Background = Color3.fromRGB(11, 11, 11),
         Border = Color3.fromRGB(26, 26, 26),
-        Timer = Color3.fromRGB(255, 255, 255)
+        Timer = Color3.fromRGB(180, 0, 0)
     }
 }
 
