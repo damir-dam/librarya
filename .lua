@@ -1979,9 +1979,9 @@ function Library._CreateDropdown(tab, config)
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 60), -- Adjusted position due to search box
+        Position = UDim2.new(1, -145, 0, 60),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
+        Size = UDim2.new(0, 135, 0, 0),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
@@ -2013,12 +2013,33 @@ function Library._CreateDropdown(tab, config)
         end
     end
 
+    local function HighlightSelected()
+        for _, btn in pairs(allOptionButtons) do
+            if multiSelect then
+                if table.find(selected, btn.Text) then
+                    btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+                    btn.BackgroundTransparency = 0.3
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
+                end
+            else
+                if btn.Text == selected then
+                    btn.BackgroundColor3 = Color3.fromRGB(139, 0, 0)
+                    btn.BackgroundTransparency = 0.3
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
+                end
+            end
+        end
+    end
+
     local function FilterOptions(text)
         for _, btn in pairs(allOptionButtons) do
             local match = string.find(string.lower(btn.Text), string.lower(text))
             btn.Visible = (match ~= nil) or (text == "")
         end
-        -- Recalculate canvas size after filtering
         local visibleCount = 0
         for _, btn in pairs(allOptionButtons) do
             if btn.Visible then
@@ -2044,11 +2065,15 @@ function Library._CreateDropdown(tab, config)
         })
 
         optionBtn.MouseEnter:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(139, 0, 0) then
+                CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+            end
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(139, 0, 0) then
+                CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+            end
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -2061,15 +2086,13 @@ function Library._CreateDropdown(tab, config)
                 end
                 UpdateSelectedText()
                 callback(selected)
+                HighlightSelected()
             else
                 selected = option
                 UpdateSelectedText()
                 callback(selected)
-                expanded = false
-                optionsContainer.Visible = false
-                searchBox.Visible = false
-                CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
-                frame.ZIndex = 1
+                HighlightSelected()
+                methods.Close()
             end
         end)
 
@@ -2094,18 +2117,15 @@ function Library._CreateDropdown(tab, config)
         Parent = selectedDisplay
     })
 
-    toggleBtn.MouseButton1Click:Connect(function()
-        expanded = not expanded
-        optionsContainer.Visible = expanded
-        searchBox.Visible = expanded
-        CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
-        frame.ZIndex = expanded and 10 or 1
-        if not expanded then
-            searchBox.Text = ""
+    local function CloseOthers()
+        for _, other in pairs(Library._dropdowns or {}) do
+            if other ~= methods and other.Close then
+                other:Close()
+            end
         end
-    end)
+    end
 
-    local methods = {
+    methods = {
         SetValue = function(_, value)
             if multiSelect and type(value) == "table" then
                 selected = value
@@ -2114,6 +2134,7 @@ function Library._CreateDropdown(tab, config)
             end
             UpdateSelectedText()
             callback(selected)
+            HighlightSelected()
         end,
         GetValue = function()
             return selected
@@ -2132,8 +2153,43 @@ function Library._CreateDropdown(tab, config)
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
             local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
             optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
+        end,
+        Open = function()
+            CloseOthers()
+            expanded = true
+            frame.ZIndex = 10
+            searchBox.Visible = true
+            optionsContainer.Visible = true
+            CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
+            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
+        end,
+        Close = function()
+            expanded = false
+            CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+            CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal, function()
+                optionsContainer.Visible = false
+                searchBox.Visible = false
+                frame.ZIndex = 1
+                searchBox.Text = ""
+            end)
         end
     }
+
+    toggleBtn.MouseButton1Click:Connect(function()
+        if expanded then
+            methods.Close()
+        else
+            methods.Open()
+        end
+    end)
+
+    HighlightSelected()
+    UpdateSelectedText()
+
+    if not Library._dropdowns then
+        Library._dropdowns = {}
+    end
+    table.insert(Library._dropdowns, methods)
 
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Dropdown", 
