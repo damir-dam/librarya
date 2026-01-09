@@ -1877,13 +1877,21 @@ function Library._CreateDropdown(tab, config)
     local flag = config.Flag
     local selected = multiSelect and {} or default
     local expanded = false
-
+    
+    -- Цвет для выбранных элементов (темно-красный)
+    local SELECTED_COLOR = Color3.fromRGB(139, 0, 0)
+    
+    -- Таблица для отслеживания открытых dropdown'ов
+    if not Library._OpenDropdowns then
+        Library._OpenDropdowns = {}
+    end
+    
     if multiSelect and type(default) == "table" then
         selected = default
     elseif multiSelect then
         selected = {}
     end
-
+    
     local frame = CreateInstance("Frame", {
         Name = "Dropdown_" .. name,
         BackgroundColor3 = c.Secondary,
@@ -1896,7 +1904,7 @@ function Library._CreateDropdown(tab, config)
     })
     CreateCorner(frame, 5)
     CreateStroke(frame)
-
+    
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
         FontFace = f.Regular,
@@ -1910,7 +1918,7 @@ function Library._CreateDropdown(tab, config)
         ZIndex = 1,
         Parent = frame
     })
-
+    
     local selectedDisplay = CreateInstance("Frame", {
         Name = "SelectedDisplay",
         BackgroundColor3 = c.Secondary,
@@ -1923,7 +1931,7 @@ function Library._CreateDropdown(tab, config)
     })
     CreateCorner(selectedDisplay, 5)
     CreateStroke(selectedDisplay)
-
+    
     local selectedLabel = CreateInstance("TextLabel", {
         Name = "SelectedLabel",
         FontFace = f.Regular,
@@ -1938,7 +1946,7 @@ function Library._CreateDropdown(tab, config)
         ZIndex = 2,
         Parent = selectedDisplay
     })
-
+    
     local arrow = CreateInstance("ImageLabel", {
         Name = "Arrow",
         Image = "rbxassetid://105558791071013",
@@ -1950,7 +1958,7 @@ function Library._CreateDropdown(tab, config)
         ZIndex = 2,
         Parent = selectedDisplay
     })
-
+    
     -- Search Box
     local searchBox = CreateInstance("TextBox", {
         Name = "SearchBox",
@@ -1958,7 +1966,7 @@ function Library._CreateDropdown(tab, config)
         BackgroundTransparency = 0.04,
         BorderSizePixel = 0,
         Position = UDim2.new(1, -145, 0, 38),
-        Size = UDim2.new(0, 135, 0, 20),
+        Size = UDim2.new(0, 135, 0, 0), -- Начальный размер 0
         Visible = false,
         ZIndex = 100,
         Text = "",
@@ -1971,16 +1979,17 @@ function Library._CreateDropdown(tab, config)
     })
     CreateCorner(searchBox, 5)
     CreateStroke(searchBox)
-
+    
     local maxVisibleOptions = 5
     local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+    
     local optionsContainer = CreateInstance("Frame", {
         Name = "OptionsContainer",
         BackgroundColor3 = c.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 60), -- Adjusted position due to search box
+        Position = UDim2.new(1, -145, 0, 60),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
+        Size = UDim2.new(0, 135, 0, 0), -- Начальный размер 0
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
@@ -1988,7 +1997,7 @@ function Library._CreateDropdown(tab, config)
     })
     CreateCorner(optionsContainer, 5)
     CreateStroke(optionsContainer)
-
+    
     local optionsScroll = CreateInstance("ScrollingFrame", {
         Name = "OptionsScroll",
         BackgroundTransparency = 1,
@@ -2001,10 +2010,20 @@ function Library._CreateDropdown(tab, config)
         Parent = optionsContainer
     })
     CreateListLayout(optionsScroll, 0, Enum.SortOrder.LayoutOrder)
-
+    
     local allOptionButtons = {}
-    local selectedButtons = {}
-
+    
+    -- Функция для закрытия всех открытых dropdown'ов
+    local function CloseAllDropdowns()
+        for dropdownId, closeFunc in pairs(Library._OpenDropdowns) do
+            if closeFunc and type(closeFunc) == "function" then
+                closeFunc()
+            end
+        end
+        Library._OpenDropdowns = {}
+    end
+    
+    -- Функция для обновления текста выбранных элементов
     local function UpdateSelectedText()
         if multiSelect then
             selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
@@ -2012,13 +2031,34 @@ function Library._CreateDropdown(tab, config)
             selectedLabel.Text = tostring(selected)
         end
     end
-
+    
+    -- Функция для обновления цветов всех кнопок
+    local function UpdateOptionButtonsColors()
+        for _, btn in pairs(allOptionButtons) do
+            if multiSelect then
+                if table.find(selected, btn.Text) then
+                    btn.TextColor3 = SELECTED_COLOR
+                else
+                    btn.TextColor3 = c.Text
+                end
+            else
+                if btn.Text == tostring(selected) then
+                    btn.TextColor3 = SELECTED_COLOR
+                else
+                    btn.TextColor3 = c.Text
+                end
+            end
+        end
+    end
+    
+    -- Функция для фильтрации опций
     local function FilterOptions(text)
         for _, btn in pairs(allOptionButtons) do
             local match = string.find(string.lower(btn.Text), string.lower(text))
             btn.Visible = (match ~= nil) or (text == "")
         end
-        -- Recalculate canvas size after filtering
+        
+        -- Пересчитываем размер canvas после фильтрации
         local visibleCount = 0
         for _, btn in pairs(allOptionButtons) do
             if btn.Visible then
@@ -2027,52 +2067,71 @@ function Library._CreateDropdown(tab, config)
         end
         optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * s.Dropdown.OptionHeight)
     end
-
-    local function UpdateSelectedVisuals()
-        -- Reset all buttons
-        for _, btn in pairs(allOptionButtons) do
-            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            btn.BackgroundTransparency = 1
+    
+    -- Функция для открытия dropdown'а
+    local function OpenDropdown()
+        if expanded then return end
+        
+        -- Закрываем все другие dropdown'ы
+        CloseAllDropdowns()
+        
+        expanded = true
+        frame.ZIndex = 10
+        
+        -- Показываем элементы
+        optionsContainer.Visible = true
+        searchBox.Visible = true
+        
+        -- Обновляем цвета кнопок
+        UpdateOptionButtonsColors()
+        
+        -- Анимация открытия
+        CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
+        CreateTween(searchBox, {
+            Size = UDim2.new(0, 135, 0, 20),
+            BackgroundTransparency = 0.04
+        }, animationspeed.Normal)
+        CreateTween(optionsContainer, {
+            Size = UDim2.new(0, 135, 0, totalOptionsHeight),
+            BackgroundTransparency = 0.04
+        }, animationspeed.Normal)
+        
+        -- Добавляем в таблицу открытых dropdown'ов
+        Library._OpenDropdowns[frame] = CloseDropdown
+    end
+    
+    -- Функция для закрытия dropdown'а
+    local function CloseDropdown()
+        if not expanded then return end
+        
+        expanded = false
+        frame.ZIndex = 1
+        
+        -- Анимация закрытия
+        CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+        CreateTween(searchBox, {
+            Size = UDim2.new(0, 135, 0, 0),
+            BackgroundTransparency = 1
+        }, animationspeed.Normal)
+        CreateTween(optionsContainer, {
+            Size = UDim2.new(0, 135, 0, 0),
+            BackgroundTransparency = 1
+        }, animationspeed.Normal)
+        
+        -- Ждем окончания анимации и скрываем элементы
+        wait(animationspeed.Normal)
+        if not expanded then
+            optionsContainer.Visible = false
+            searchBox.Visible = false
+            searchBox.Text = ""
+            FilterOptions("")
         end
         
-        -- Highlight selected buttons
-        if multiSelect then
-            for _, selectedOption in pairs(selected) do
-                if selectedButtons[selectedOption] then
-                    selectedButtons[selectedOption].BackgroundColor3 = Color3.fromRGB(139, 0, 0) -- Темно-красный
-                    selectedButtons[selectedOption].BackgroundTransparency = 0.3
-                end
-            end
-        else
-            if selectedButtons[selected] then
-                selectedButtons[selected].BackgroundColor3 = Color3.fromRGB(139, 0, 0) -- Темно-красный
-                selectedButtons[selected].BackgroundTransparency = 0.3
-            end
-        end
+        -- Удаляем из таблицы открытых dropdown'ов
+        Library._OpenDropdowns[frame] = nil
     end
-
-    local function CloseAllDropdowns()
-        for _, otherTab in pairs(tab._library.Tabs) do
-            for _, element in pairs(otherTab.Elements) do
-                if element.Type == "Dropdown" and element.Element ~= frame then
-                    element.Methods:SetExpanded(false)
-                end
-            end
-        end
-    end
-
-    local function AnimateOpenClose(container, isOpening)
-        if isOpening then
-            container.Visible = true
-            container.Size = UDim2.new(0, 135, 0, 0)
-            CreateTween(container, {Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        else
-            CreateTween(container, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal, Enum.EasingStyle.Quad, Enum.EasingDirection.In):Completed:Connect(function()
-                container.Visible = false
-            end)
-        end
-    end
-
+    
+    -- Функция для создания кнопок опций
     local function CreateOptionButton(option)
         local optionBtn = CreateInstance("TextButton", {
             Name = option,
@@ -2088,16 +2147,23 @@ function Library._CreateDropdown(tab, config)
             Parent = optionsScroll
         })
         
-        optionBtn.MouseEnter:Connect(function()
-            if (multiSelect and not table.find(selected, option)) or (not multiSelect and selected ~= option) then
-                CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+        -- Устанавливаем начальный цвет
+        if multiSelect then
+            if table.find(selected, option) then
+                optionBtn.TextColor3 = SELECTED_COLOR
             end
+        else
+            if option == selected then
+                optionBtn.TextColor3 = SELECTED_COLOR
+            end
+        end
+        
+        optionBtn.MouseEnter:Connect(function()
+            CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
         end)
         
         optionBtn.MouseLeave:Connect(function()
-            if (multiSelect and not table.find(selected, option)) or (not multiSelect and selected ~= option) then
-                CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
-            end
+            CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
         end)
         
         optionBtn.MouseButton1Click:Connect(function()
@@ -2105,42 +2171,45 @@ function Library._CreateDropdown(tab, config)
                 local index = table.find(selected, option)
                 if index then
                     table.remove(selected, index)
+                    optionBtn.TextColor3 = c.Text
                 else
                     table.insert(selected, option)
+                    optionBtn.TextColor3 = SELECTED_COLOR
                 end
                 UpdateSelectedText()
-                UpdateSelectedVisuals()
                 callback(selected)
             else
+                -- Обновляем цвета всех кнопок
+                for _, btn in pairs(allOptionButtons) do
+                    if btn.Text == option then
+                        btn.TextColor3 = SELECTED_COLOR
+                    else
+                        btn.TextColor3 = c.Text
+                    end
+                end
+                
                 selected = option
                 UpdateSelectedText()
-                UpdateSelectedVisuals()
                 callback(selected)
-                expanded = false
-                AnimateOpenClose(optionsContainer, false)
-                searchBox.Visible = false
-                CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
-                frame.ZIndex = 1
+                CloseDropdown()
             end
         end)
         
         allOptionButtons[#allOptionButtons + 1] = optionBtn
-        selectedButtons[option] = optionBtn
-        
         return optionBtn
     end
-
+    
+    -- Создаем кнопки опций
     for _, option in ipairs(options) do
         CreateOptionButton(option)
     end
     
-    -- Initialize selected visuals
-    UpdateSelectedVisuals()
-
+    -- Обработчик изменения текста в поиске
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         FilterOptions(searchBox.Text)
     end)
-
+    
+    -- Кнопка для переключения dropdown'а
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleBtn",
         Text = "",
@@ -2149,25 +2218,36 @@ function Library._CreateDropdown(tab, config)
         ZIndex = 3,
         Parent = selectedDisplay
     })
-
+    
     toggleBtn.MouseButton1Click:Connect(function()
-        expanded = not expanded
-        
         if expanded then
-            CloseAllDropdowns()
-        end
-        
-        AnimateOpenClose(optionsContainer, expanded)
-        searchBox.Visible = expanded
-        CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
-        frame.ZIndex = expanded and 10 or 1
-        
-        if not expanded then
-            wait(animationspeed.Normal) -- Ждем завершения анимации
-            searchBox.Text = ""
+            CloseDropdown()
+        else
+            OpenDropdown()
         end
     end)
-
+    
+    -- Закрытие dropdown'а при клике вне его
+    local function HandleOutsideClick(input)
+        if expanded and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+            local absolutePosition = frame.AbsolutePosition
+            local absoluteSize = frame.AbsoluteSize
+            
+            -- Проверяем, находится ли клик вне dropdown'а
+            if mousePos.X < absolutePosition.X or 
+               mousePos.X > absolutePosition.X + absoluteSize.X or
+               mousePos.Y < absolutePosition.Y or 
+               mousePos.Y > absolutePosition.Y + absoluteSize.Y + totalOptionsHeight + 60 then
+                CloseDropdown()
+            end
+        end
+    end
+    
+    -- Подписываемся на клики
+    game:GetService("UserInputService").InputBegan:Connect(HandleOutsideClick)
+    
+    -- Методы для управления dropdown'ом
     local methods = {
         SetValue = function(_, value)
             if multiSelect and type(value) == "table" then
@@ -2176,53 +2256,47 @@ function Library._CreateDropdown(tab, config)
                 selected = value
             end
             UpdateSelectedText()
-            UpdateSelectedVisuals()
+            UpdateOptionButtonsColors()
             callback(selected)
         end,
         GetValue = function()
             return selected
         end,
-        SetExpanded = function(_, state)
-            if expanded == state then return end
-            expanded = state
-            AnimateOpenClose(optionsContainer, expanded)
-            searchBox.Visible = expanded
-            CreateTween(arrow, {Rotation = expanded and 180 or 0}, animationspeed.Normal)
-            frame.ZIndex = expanded and 10 or 1
-            
-            if not expanded then
-                wait(animationspeed.Normal)
-                searchBox.Text = ""
-            end
-        end,
         Refresh = function(_, newOptions)
             options = newOptions
+            
+            -- Удаляем старые кнопки
             for _, child in ipairs(optionsScroll:GetChildren()) do
                 if child:IsA("TextButton") then
                     child:Destroy()
                 end
             end
-            allOptionButtons = {}
-            selectedButtons = {}
             
+            allOptionButtons = {}
+            
+            -- Создаем новые кнопки
             for _, option in ipairs(options) do
                 CreateOptionButton(option)
             end
             
+            -- Обновляем размеры
+            totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
             optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
-            local newTotalHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
-            optionsContainer.Size = UDim2.new(0, 135, 0, newTotalHeight)
-            UpdateSelectedVisuals()
+            
+            -- Если dropdown открыт, закрываем его для обновления
+            if expanded then
+                CloseDropdown()
+            end
         end
     }
-
+    
     if flag and tab._library then
-        tab._library:_RegisterConfigElement(flag, "Dropdown",
+        tab._library:_RegisterConfigElement(flag, "Dropdown", 
             function() return selected end,
             function(value) methods:SetValue(value) end
         )
     end
-
+    
     return methods
 end
 
