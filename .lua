@@ -1892,7 +1892,7 @@ function Library._CreateDropdown(tab, config)
     -- Создание элементов интерфейса
     local frame = CreateInstance("Frame", {
         Name = "Dropdown_" .. name,
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BackgroundColor3 = Color3.fromRGB(80, 0, 0),
         BackgroundTransparency = 0.2,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 40),
