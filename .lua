@@ -1346,251 +1346,309 @@ function Library._CreateSlider(tab, config)
     local default = config.Default or 50
     local callback = config.Callback or function() end
     local flag = config.Flag
-    local round = config.Round or 0
+    local round = config.Round or 1 -- Изменено на 1 для шага 0.1 по умолчанию
     
     local currentValue = default
     local dragging = false
 
     local frame = CreateInstance("Frame", {
         Name = "Slider_" .. name,
-        BackgroundColor3 = c.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BackgroundTransparency = 0.2,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, s.Slider.Height),
+        Size = UDim2.new(1, 0, 0, 50),
         Parent = tab.content
     })
-    CreateCorner(frame, 5)
-    CreateStroke(frame)
+    
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 6)
+    frameCorner.Parent = frame
+    
+    local frameStroke = Instance.new("UIStroke")
+    frameStroke.Color = Color3.fromRGB(60, 60, 60)
+    frameStroke.Thickness = 1
+    frameStroke.Parent = frame
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        FontFace = f.Regular,
-        TextColor3 = c.Text,
+        Font = Enum.Font.Gotham,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 5),
-        TextSize = textsize.Normal,
+        Position = UDim2.new(0, 12, 0, 5),
+        TextSize = 14,
         Size = UDim2.new(0, 200, 0, 20),
         Parent = frame
     })
 
-    -- Текстовое поле с выравниванием по центру и более левой позицией
     local valueBox = CreateInstance("TextBox", {
         Name = "ValueBox",
-        FontFace = f.Regular,
-        TextColor3 = c.Text,
+        Font = Enum.Font.Gotham,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
         Text = tostring(currentValue),
         PlaceholderText = "Value",
-        PlaceholderColor3 = c.TextDark,
+        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
         TextXAlignment = Enum.TextXAlignment.Center,
-        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
         BackgroundTransparency = 0,
-        Position = UDim2.new(1, -80, 0, 5), -- Сдвигаем левее (-80 вместо -60)
-        TextSize = textsize.Normal,
-        Size = UDim2.new(0, 70, 0, 20), -- Немного шире (70 вместо 50)
+        Position = UDim2.new(1, -80, 0, 5),
+        TextSize = 14,
+        Size = UDim2.new(0, 70, 0, 20),
         Parent = frame
     })
-    CreateCorner(valueBox, 3)
-    CreateStroke(valueBox)
+    
+    local valueBoxCorner = Instance.new("UICorner")
+    valueBoxCorner.CornerRadius = UDim.new(0, 4)
+    valueBoxCorner.Parent = valueBox
+    
+    local valueBoxStroke = Instance.new("UIStroke")
+    valueBoxStroke.Color = Color3.fromRGB(80, 80, 80)
+    valueBoxStroke.Thickness = 1
+    valueBoxStroke.Parent = valueBox
 
-    -- Фон для линии слайдера (черный)
+    -- Фон для линии слайдера
     local sliderBg = CreateInstance("Frame", {
         Name = "SliderBackground",
-        BackgroundColor3 = Color3.fromRGB(11, 11, 11),
-        Position = UDim2.new(0, 10, 0, 29),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+        Position = UDim2.new(0, 12, 0, 32),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -100, 0, 4), -- Уменьшаем ширину, чтобы поместилось текстовое поле
+        Size = UDim2.new(1, -100, 0, 6),
         Parent = frame
     })
-    CreateCorner(sliderBg, 2)
+    
+    local bgCorner = Instance.new("UICorner")
+    bgCorner.CornerRadius = UDim.new(0, 3)
+    bgCorner.Parent = sliderBg
 
-    -- Прогресс (темно-красный)
+    -- Прогресс
     local sliderFill = CreateInstance("Frame", {
         Name = "SliderFill",
-        BackgroundColor3 = Color3.fromRGB(139, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(50, 150, 255),
         BorderSizePixel = 0,
         Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
         Parent = sliderBg
     })
-    CreateCorner(sliderFill, 2)
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0, 3)
+    fillCorner.Parent = sliderFill
 
-    -- Темно-серый кружок для перетаскивания
+    -- Кружок для перетаскивания (уменьшенный)
     local sliderCircle = CreateInstance("Frame", {
         Name = "SliderCircle",
-        BackgroundColor3 = Color3.fromRGB(80, 80, 80), -- Темно-серый
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
-        Size = UDim2.new(0, 18, 0, 18),
+        Size = UDim2.new(0, 16, 0, 16), -- Уменьшен с 18 до 16
         Parent = sliderBg,
         ZIndex = 2
     })
-    CreateCorner(sliderCircle, 100)
-    CreateInstance("UIStroke", {
-        Color = Color3.fromRGB(40, 40, 40),
-        Thickness = 1.5,
-        Parent = sliderCircle
-    })
+    
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = sliderCircle
+    
+    local circleStroke = Instance.new("UIStroke")
+    circleStroke.Color = Color3.fromRGB(100, 100, 100)
+    circleStroke.Thickness = 2
+    circleStroke.Parent = sliderCircle
 
-    -- Кнопка для перетаскивания (только на кружке)
+    -- Кнопка для перетаскивания (увеличена для лучшего захвата)
     local dragButton = CreateInstance("TextButton", {
         Name = "DragButton",
         Text = "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(2, 0, 2, 0),
+        Size = UDim2.new(3, 0, 3, 0), -- Увеличена область захвата
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         ZIndex = 3,
         Parent = sliderCircle
     })
 
-    local function FormatValue(value)
-        if round > 0 then
-            return string.format("%." .. round .. "f", value)
-        end
-        return tostring(math.floor(value))
-    end
-
-    local function CalculateValueFromPosition(xPos)
-        local framePos = sliderBg.AbsolutePosition.X
-        local frameSize = sliderBg.AbsoluteSize.X
-        local relativeX = math.clamp((xPos - framePos) / frameSize, 0, 1)
-        
-        local value = min + (max - min) * relativeX
-        
-        if round > 0 then
-            value = math.floor(value * (10 ^ round)) / (10 ^ round)
-        else
-            value = math.floor(value)
-        end
-        
-        return value, relativeX
-    end
-
-    -- Функция для плавного обновления
-    local function UpdateVisuals(relativeX, instant)
-        -- Обновляем прогресс
-        if instant then
-            sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
-            sliderCircle.Position = UDim2.new(relativeX, 0, 0.5, 0)
-        else
-            CreateTween(sliderFill, {
-                Size = UDim2.new(relativeX, 0, 1, 0)
-            }, 0.1)
-            CreateTween(sliderCircle, {
-                Position = UDim2.new(relativeX, 0, 0.5, 0)
-            }, 0.1)
-        end
-    end
-
-    local function UpdateSliderFromPosition(xPos)
-        local value, relativeX = CalculateValueFromPosition(xPos)
-        
-        if value ~= currentValue then
-            currentValue = value
-            
-            -- Плавное обновление визуалов при перетаскивании
-            UpdateVisuals(relativeX, true) -- instant = true для плавного перетаскивания
-            
-            -- Обновляем текстовое поле
-            valueBox.Text = FormatValue(currentValue)
-            callback(currentValue)
-        end
-    end
-
-    local function UpdateSliderFromValue(value)
-        value = tonumber(value) or currentValue
-        currentValue = math.clamp(value, min, max)
-        local relativeX = (currentValue - min) / (max - min)
-        
-        -- Плавное обновление визуалов
-        UpdateVisuals(relativeX, false)
-        
-        -- Обновляем текстовое поле
-        valueBox.Text = FormatValue(currentValue)
-        callback(currentValue)
-    end
-
     -- Обработка ввода в текстовое поле
     valueBox.FocusLost:Connect(function(enterPressed)
         local text = valueBox.Text
         local numValue = tonumber(text)
         if numValue then
-            UpdateSliderFromValue(numValue)
+            -- Округляем до шага 0.1
+            numValue = math.floor(numValue * 10 + 0.5) / 10
+            numValue = math.clamp(numValue, min, max)
+            
+            currentValue = numValue
+            local relativeX = (currentValue - min) / (max - min)
+            
+            -- Плавная анимация
+            local tweenService = game:GetService("TweenService")
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            tweenService:Create(sliderFill, tweenInfo, {
+                Size = UDim2.new(relativeX, 0, 1, 0)
+            }):Play()
+            
+            tweenService:Create(sliderCircle, tweenInfo, {
+                Position = UDim2.new(relativeX, 0, 0.5, 0)
+            }):Play()
+            
+            valueBox.Text = string.format("%.1f", currentValue)
+            callback(currentValue)
         else
-            -- Если ввели не число, возвращаем предыдущее значение
-            valueBox.Text = FormatValue(currentValue)
+            valueBox.Text = string.format("%.1f", currentValue)
         end
     end)
 
-    -- Начало перетаскивания
+    -- Функция для плавного обновления слайдера
+    local function UpdateSliderFromMouse(xPos)
+        local framePos = sliderBg.AbsolutePosition.X
+        local frameSize = sliderBg.AbsoluteSize.X
+        local relativeX = math.clamp((xPos - framePos) / frameSize, 0, 1)
+        
+        -- Вычисляем значение с шагом 0.1
+        local rawValue = min + (max - min) * relativeX
+        local newValue = math.floor(rawValue * 10 + 0.5) / 10
+        
+        -- Ограничиваем значение
+        newValue = math.clamp(newValue, min, max)
+        
+        if math.abs(newValue - currentValue) >= 0.1 then
+            currentValue = newValue
+            
+            -- Плавное обновление визуалов
+            local tweenService = game:GetService("TweenService")
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            local newRelativeX = (currentValue - min) / (max - min)
+            
+            tweenService:Create(sliderFill, tweenInfo, {
+                Size = UDim2.new(newRelativeX, 0, 1, 0)
+            }):Play()
+            
+            tweenService:Create(sliderCircle, tweenInfo, {
+                Position = UDim2.new(newRelativeX, 0, 0.5, 0)
+            }):Play()
+            
+            valueBox.Text = string.format("%.1f", currentValue)
+            callback(currentValue)
+        end
+    end
+
+    -- Функция для обновления слайдера из значения
+    local function UpdateSliderFromValue(value)
+        value = tonumber(value) or currentValue
+        -- Округляем до шага 0.1
+        value = math.floor(value * 10 + 0.5) / 10
+        currentValue = math.clamp(value, min, max)
+        local relativeX = (currentValue - min) / (max - min)
+        
+        -- Плавная анимация
+        local tweenService = game:GetService("TweenService")
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        
+        tweenService:Create(sliderFill, tweenInfo, {
+            Size = UDim2.new(relativeX, 0, 1, 0)
+        }):Play()
+        
+        tweenService:Create(sliderCircle, tweenInfo, {
+            Position = UDim2.new(relativeX, 0, 0.5, 0)
+        }):Play()
+        
+        valueBox.Text = string.format("%.1f", currentValue)
+        callback(currentValue)
+    end
+
+    -- Обработка начала перетаскивания
     dragButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             
             -- Визуальная обратная связь
-            CreateTween(sliderCircle, {
-                BackgroundColor3 = Color3.fromRGB(100, 100, 100),
-                Size = UDim2.new(0, 20, 0, 20)
-            }, 0.1)
+            local tweenService = game:GetService("TweenService")
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            tweenService:Create(sliderCircle, tweenInfo, {
+                BackgroundColor3 = Color3.fromRGB(220, 220, 220),
+                Size = UDim2.new(0, 18, 0, 18) -- Немного увеличиваем при захвате
+            }):Play()
             
             -- Немедленное обновление при начале перетаскивания
-            UpdateSliderFromPosition(input.Position.X)
+            UpdateSliderFromMouse(input.Position.X)
         end
     end)
 
-    -- Конец перетаскивания
-    ui.InputEnded:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+    -- Обработка перемещения мыши при перетаскивании
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            UpdateSliderFromMouse(input.Position.X)
+        end
+    end)
+
+    -- Обработка окончания перетаскивания
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
             
             -- Возвращаем кружок в исходное состояние
-            CreateTween(sliderCircle, {
-                BackgroundColor3 = Color3.fromRGB(80, 80, 80),
+            local tweenService = game:GetService("TweenService")
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            tweenService:Create(sliderCircle, tweenInfo, {
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                Size = UDim2.new(0, 16, 0, 16)
+            }):Play()
+        end
+    end)
+
+    -- Также позволяем перетаскивать по всей линии слайдера
+    local sliderLineButton = CreateInstance("TextButton", {
+        Name = "SliderLineButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 2, 0),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        ZIndex = 1,
+        Parent = sliderBg
+    })
+
+    sliderLineButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            
+            -- Визуальная обратная связь
+            local tweenService = game:GetService("TweenService")
+            local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            
+            tweenService:Create(sliderCircle, tweenInfo, {
+                BackgroundColor3 = Color3.fromRGB(220, 220, 220),
                 Size = UDim2.new(0, 18, 0, 18)
-            }, 0.1)
+            }):Play()
+            
+            -- Немедленное обновление
+            UpdateSliderFromMouse(input.Position.X)
         end
     end)
 
-    -- Плавное перетаскивание через RenderStepped
-    local connection
-    connection = rs.RenderStepped:Connect(function()
-        if dragging then
-            local mouse = ui:GetMouseLocation()
-            UpdateSliderFromPosition(mouse.X)
-        end
-    end)
-
-    -- Сохраняем соединение для очистки
-    local sliderId = "slider_" .. name
-    Connections[sliderId] = connection
-
+    -- Методы управления
     local methods = {
         SetValue = function(_, value)
             UpdateSliderFromValue(value)
         end,
+        
         GetValue = function()
             return currentValue
+        end,
+        
+        Destroy = function()
+            frame:Destroy()
         end
     }
 
+    -- Регистрация флага если нужно
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Slider", 
             function() return currentValue end,
             function(value) methods:SetValue(value) end
         )
-    end
-
-    -- Очистка соединения при уничтожении
-    local originalDestroy = methods.Destroy
-    methods.Destroy = function()
-        if Connections[sliderId] then
-            Connections[sliderId]:Disconnect()
-            Connections[sliderId] = nil
-        end
-        if originalDestroy then
-            originalDestroy()
-        end
     end
 
     return methods
