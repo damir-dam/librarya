@@ -1878,7 +1878,11 @@ function Library._CreateDropdown(tab, config)
     local selected = multiSelect and {} or default
     local expanded = false
 
-    -- Инициализация системы управления открытыми dropdown
+    -- Цвета для выбранных элементов
+    local SELECTED_TEXT_COLOR = Color3.fromRGB(139, 0, 0)  -- Темно-красный текст
+    local SELECTED_BG_COLOR = Color3.fromRGB(40, 0, 0)     -- Очень темный красный фон
+
+    -- Инициализируем таблицу для отслеживания открытых dropdown'ов
     if not Library._OpenDropdowns then
         Library._OpenDropdowns = {}
     end
@@ -1889,160 +1893,133 @@ function Library._CreateDropdown(tab, config)
         selected = {}
     end
 
-    -- Создание элементов интерфейса
     local frame = CreateInstance("Frame", {
         Name = "Dropdown_" .. name,
-        BackgroundColor3 = Color3.fromRGB(80, 0, 0),
-        BackgroundTransparency = 0.2,
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 40),
+        Size = UDim2.new(1, 0, 0, s.Dropdown.Height),
         ClipsDescendants = false,
-        ZIndex = 5,
+        ZIndex = 1,
         Parent = tab.content
     })
 
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 6)
-    uiCorner.Parent = frame
-
-    local uiStroke = Instance.new("UIStroke")
-    uiStroke.Color = Color3.fromRGB(60, 60, 60)
-    uiStroke.Thickness = 1
-    uiStroke.Parent = frame
+    CreateCorner(frame, 5)
+    CreateStroke(frame)
 
     local nameLabel = CreateInstance("TextLabel", {
         Name = "Name",
-        Font = Enum.Font.Gotham,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 0),
-        TextSize = 14,
-        Size = UDim2.new(0, 200, 0, 40),
-        ZIndex = 6,
+        Position = UDim2.new(0, 10, 0, 10),
+        TextSize = textsize.Normal,
+        Size = UDim2.new(0, 200, 0, 20),
+        ZIndex = 1,
         Parent = frame
     })
 
     local selectedDisplay = CreateInstance("Frame", {
         Name = "SelectedDisplay",
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-        BackgroundTransparency = 0,
-        Position = UDim2.new(1, -140, 0, 6),
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.04,
+        Position = UDim2.new(1, -145, 0, 6),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 130, 0, 28),
-        ZIndex = 6,
+        Size = UDim2.new(0, 135, 0, 26),
+        ZIndex = 2,
         Parent = frame
     })
 
-    local displayCorner = Instance.new("UICorner")
-    displayCorner.CornerRadius = UDim.new(0, 4)
-    displayCorner.Parent = selectedDisplay
-
-    local displayStroke = Instance.new("UIStroke")
-    displayStroke.Color = Color3.fromRGB(80, 80, 80)
-    displayStroke.Thickness = 1
-    displayStroke.Parent = selectedDisplay
+    CreateCorner(selectedDisplay, 5)
+    CreateStroke(selectedDisplay)
 
     local selectedLabel = CreateInstance("TextLabel", {
         Name = "SelectedLabel",
-        Font = Enum.Font.Gotham,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
+        FontFace = f.Regular,
+        TextColor3 = c.Text,
         Text = multiSelect and (#selected > 0 and table.concat(selected, ", ") or "None") or tostring(selected),
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        TextSize = 12,
+        TextSize = textsize.Small,
         Size = UDim2.new(1, -30, 1, 0),
-        Position = UDim2.new(0, 8, 0, 0),
+        Position = UDim2.new(0, 10, 0, 0),
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 7,
+        ZIndex = 2,
         Parent = selectedDisplay
     })
 
     local arrow = CreateInstance("ImageLabel", {
         Name = "Arrow",
-        Image = "rbxassetid://10709790948", -- Прямая стрелка
-        ImageColor3 = Color3.fromRGB(200, 200, 200),
+        Image = "rbxassetid://105558791071013",
+        ImageColor3 = c.TextDark,
         BackgroundTransparency = 1,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(1, -15, 0.5, 0),
-        Size = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(1, -20, 0.5, -5),
+        Size = UDim2.new(0, 10, 0, 10),
         Rotation = 0,
-        ZIndex = 7,
+        ZIndex = 2,
         Parent = selectedDisplay
     })
 
-    -- Выпадающий контейнер
-    local dropdownFrame = CreateInstance("Frame", {
-        Name = "DropdownFrame",
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-        BackgroundTransparency = 0,
-        Position = UDim2.new(0, 0, 1, 2),
-        Size = UDim2.new(1, 0, 0, 0),
+    -- Search Box
+    local searchBox = CreateInstance("TextBox", {
+        Name = "SearchBox",
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.04,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -145, 0, 38),
+        Size = UDim2.new(0, 135, 0, 20),
+        Visible = false,
+        ZIndex = 100,
+        Text = "",
+        PlaceholderText = "Search...",
+        TextColor3 = c.Text,
+        FontFace = f.Regular,
+        TextSize = textsize.Small,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = frame
+    })
+
+    CreateCorner(searchBox, 5)
+    CreateStroke(searchBox)
+
+    local maxVisibleOptions = 5
+    local totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+
+    local optionsContainer = CreateInstance("Frame", {
+        Name = "OptionsContainer",
+        BackgroundColor3 = c.Secondary,
+        BackgroundTransparency = 0.04,
+        Position = UDim2.new(1, -145, 0, 60),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 135, 0, totalOptionsHeight),
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
         Parent = frame
     })
 
-    local dropdownCorner = Instance.new("UICorner")
-    dropdownCorner.CornerRadius = UDim.new(0, 6)
-    dropdownCorner.Parent = dropdownFrame
+    CreateCorner(optionsContainer, 5)
+    CreateStroke(optionsContainer)
 
-    local dropdownStroke = Instance.new("UIStroke")
-    dropdownStroke.Color = Color3.fromRGB(80, 80, 80)
-    dropdownStroke.Thickness = 1
-    dropdownStroke.Parent = dropdownFrame
-
-    -- Поле поиска
-    local searchBox = CreateInstance("TextBox", {
-        Name = "SearchBox",
-        BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        Position = UDim2.new(0, 8, 0, 8),
-        Size = UDim2.new(1, -16, 0, 28),
-        Visible = false,
-        ZIndex = 101,
-        Text = "",
-        PlaceholderText = "Search...",
-        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        Parent = dropdownFrame
-    })
-
-    local searchCorner = Instance.new("UICorner")
-    searchCorner.CornerRadius = UDim.new(0, 4)
-    searchCorner.Parent = searchBox
-
-    -- Скроллинг для опций
     local optionsScroll = CreateInstance("ScrollingFrame", {
         Name = "OptionsScroll",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 0, 0, 0),
         Size = UDim2.new(1, 0, 1, 0),
-        CanvasSize = UDim2.new(0, 0, 0, #options * 32),
+        CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100),
-        ZIndex = 101,
-        Parent = dropdownFrame
+        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ZIndex = 100,
+        Parent = optionsContainer
     })
 
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.Padding = UDim.new(0, 2)
-    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    uiListLayout.Parent = optionsScroll
+    CreateListLayout(optionsScroll, 0, Enum.SortOrder.LayoutOrder)
 
     local allOptionButtons = {}
-    local maxVisibleOptions = 5
-    local optionHeight = 32
 
-    -- Функции управления
+    -- Функция для обновления текста выбранных элементов
     local function UpdateSelectedText()
         if multiSelect then
             selectedLabel.Text = #selected > 0 and table.concat(selected, ", ") or "None"
@@ -2051,239 +2028,226 @@ function Library._CreateDropdown(tab, config)
         end
     end
 
-    local function UpdateOptionColors()
+    -- Функция для обновления цветов всех кнопок
+    local function UpdateOptionButtonsColors()
         for _, btn in pairs(allOptionButtons) do
-            if btn.Visible then
-                if multiSelect then
-                    local isSelected = false
-                    for _, sel in ipairs(selected) do
-                        if sel == btn.Text then
-                            isSelected = true
-                            break
-                        end
-                    end
-                    
-                    if isSelected then
-                        btn.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-                        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    else
-                        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-                        btn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                    end
+            if multiSelect then
+                if table.find(selected, btn.Text) then
+                    btn.TextColor3 = SELECTED_TEXT_COLOR
+                    btn.BackgroundColor3 = SELECTED_BG_COLOR
+                    btn.BackgroundTransparency = 0
                 else
-                    if btn.Text == tostring(selected) then
-                        btn.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-                        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    else
-                        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-                        btn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                    end
+                    btn.TextColor3 = c.Text
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
+                end
+            else
+                if btn.Text == tostring(selected) then
+                    btn.TextColor3 = SELECTED_TEXT_COLOR
+                    btn.BackgroundColor3 = SELECTED_BG_COLOR
+                    btn.BackgroundTransparency = 0
+                else
+                    btn.TextColor3 = c.Text
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    btn.BackgroundTransparency = 1
                 end
             end
         end
     end
 
-    local function FilterOptions(searchText)
+    -- Функция для фильтрации опций
+    local function FilterOptions(text)
+        for _, btn in pairs(allOptionButtons) do
+            local match = string.find(string.lower(btn.Text), string.lower(text))
+            btn.Visible = (match ~= nil) or (text == "")
+        end
+
+        -- Пересчитываем размер canvas после фильтрации
         local visibleCount = 0
         for _, btn in pairs(allOptionButtons) do
-            local visible = searchText == "" or string.find(string.lower(btn.Text), string.lower(searchText))
-            btn.Visible = visible
-            if visible then
+            if btn.Visible then
                 visibleCount = visibleCount + 1
             end
         end
-        
-        local visibleHeight = math.min(visibleCount * optionHeight, maxVisibleOptions * optionHeight)
-        optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * optionHeight)
-        
-        return visibleHeight
+
+        optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * s.Dropdown.OptionHeight)
     end
 
-    -- Закрытие всех dropdown
-    local function CloseAllDropdowns()
-        for _, dropdownData in pairs(Library._OpenDropdowns) do
-            if dropdownData and dropdownData.closeFunc then
-                dropdownData.closeFunc()
-            end
-        end
-        Library._OpenDropdowns = {}
-    end
-
-    -- Функция открытия
+    -- Функция для открытия dropdown'а
     local function OpenDropdown()
         if expanded then return end
-        
-        -- Закрываем все другие dropdown
-        CloseAllDropdowns()
-        
+
+        -- Закрываем все другие открытые dropdown'ы
+        for dropdownFrame, closeFunc in pairs(Library._OpenDropdowns) do
+            if dropdownFrame ~= frame and closeFunc and type(closeFunc) == "function" then
+                closeFunc()
+            end
+        end
+
         expanded = true
-        frame.ZIndex = 50
-        dropdownFrame.Visible = true
-        
-        -- Показываем поле поиска если много опций
-        local showSearch = #options > 5
-        searchBox.Visible = showSearch
-        
-        -- Рассчитываем высоту
-        local visibleHeight = FilterOptions("")
-        local totalHeight = visibleHeight + (showSearch and 40 or 8)
-        totalHeight = math.min(totalHeight, maxVisibleOptions * optionHeight + (showSearch and 40 or 8))
-        
+        frame.ZIndex = 10
+
+        -- Показываем элементы
+        optionsContainer.Visible = true
+        searchBox.Visible = true
+
+        -- Обновляем цвета кнопок
+        UpdateOptionButtonsColors()
+
         -- Анимация открытия
-        arrow.Rotation = 180
-        
-        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tweenService = game:GetService("TweenService")
-        
-        local tween = tweenService:Create(dropdownFrame, tweenInfo, {
-            Size = UDim2.new(1, 0, 0, totalHeight)
-        })
-        tween:Play()
-        
-        -- Обновляем цвета
-        UpdateOptionColors()
-        
-        -- Добавляем в список открытых
-        Library._OpenDropdowns[frame] = {
-            closeFunc = CloseDropdown,
-            isOpen = true
-        }
+        CreateTween(arrow, {Rotation = 180}, animationspeed.Normal)
+        CreateTween(optionsContainer, {Position = UDim2.new(1, -145, 0, 60), Size = UDim2.new(0, 135, 0, totalOptionsHeight)}, animationspeed.Normal)
+
+        -- Добавляем в таблицу открытых dropdown'ов
+        Library._OpenDropdowns[frame] = CloseDropdown
     end
 
-    -- Функция закрытия
+    -- Функция для закрытия dropdown'а
     local function CloseDropdown()
         if not expanded then return end
-        
+
         expanded = false
-        
+        frame.ZIndex = 1
+
         -- Анимация закрытия
-        arrow.Rotation = 0
-        
-        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        local tweenService = game:GetService("TweenService")
-        
-        local tween = tweenService:Create(dropdownFrame, tweenInfo, {
-            Size = UDim2.new(1, 0, 0, 0)
-        })
-        tween:Play()
-        
-        -- Ждем окончания анимации
-        tween.Completed:Wait()
-        
+        CreateTween(arrow, {Rotation = 0}, animationspeed.Normal)
+        CreateTween(optionsContainer, {Size = UDim2.new(0, 135, 0, 0)}, animationspeed.Normal)
+
+        -- Ждем окончания анимации и скрываем элементы
+        wait(animationspeed.Normal)
         if not expanded then
-            dropdownFrame.Visible = false
+            optionsContainer.Visible = false
+            searchBox.Visible = false
             searchBox.Text = ""
             FilterOptions("")
         end
-        
-        -- Удаляем из списка
+
+        -- Удаляем из таблицы открытых dropdown'ов
         Library._OpenDropdowns[frame] = nil
     end
 
-    -- Создание кнопок опций
-    for _, option in ipairs(options) do
+    -- Функция для создания кнопок опций
+    local function CreateOptionButton(option)
         local optionBtn = CreateInstance("TextButton", {
-            Name = "Option_" .. option,
-            Font = Enum.Font.Gotham,
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Text = tostring(option),
-            BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-            BackgroundTransparency = 0,
+            Name = option,
+            FontFace = f.Regular,
+            TextColor3 = c.Text,
+            Text = option,
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundTransparency = 1,
             BorderSizePixel = 0,
-            TextSize = 12,
-            Size = UDim2.new(1, -8, 0, optionHeight - 2),
-            Position = UDim2.new(0, 4, 0, 0),
-            ZIndex = 102,
+            TextSize = textsize.Small,
+            Size = UDim2.new(1, 0, 0, s.Dropdown.OptionHeight),
+            ZIndex = 100,
             Parent = optionsScroll
         })
 
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 4)
-        btnCorner.Parent = optionBtn
-
-        -- Установка начальных цветов
+        -- Устанавливаем начальный цвет
         if multiSelect then
-            local isSelected = false
-            for _, sel in ipairs(selected) do
-                if sel == option then
-                    isSelected = true
-                    break
-                end
-            end
-            if isSelected then
-                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-                optionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            if table.find(selected, option) then
+                optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                optionBtn.BackgroundTransparency = 0
             end
         else
             if option == selected then
-                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
-                optionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                optionBtn.BackgroundTransparency = 0
             end
         end
 
-        -- Анимация при наведении
         optionBtn.MouseEnter:Connect(function()
-            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(50, 150, 255) then
-                optionBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            if multiSelect then
+                if table.find(selected, option) then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+                end
+            else
+                if option == selected then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 0.5}, animationspeed.Fast)
+                end
             end
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            if optionBtn.BackgroundColor3 ~= Color3.fromRGB(50, 150, 255) then
-                optionBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            if multiSelect then
+                if table.find(selected, option) then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                end
+            else
+                if option == selected then
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
+                else
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                end
             end
         end)
 
-        -- Обработка клика
         optionBtn.MouseButton1Click:Connect(function()
             if multiSelect then
-                local found = false
-                for i, sel in ipairs(selected) do
-                    if sel == option then
-                        table.remove(selected, i)
-                        found = true
-                        break
-                    end
-                end
-                
-                if not found then
+                local index = table.find(selected, option)
+                if index then
+                    table.remove(selected, index)
+                    optionBtn.TextColor3 = c.Text
+                    optionBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                    CreateTween(optionBtn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                else
                     table.insert(selected, option)
+                    optionBtn.TextColor3 = SELECTED_TEXT_COLOR
+                    optionBtn.BackgroundColor3 = SELECTED_BG_COLOR
+                    CreateTween(optionBtn, {BackgroundTransparency = 0}, animationspeed.Fast)
                 end
-                
+
                 UpdateSelectedText()
-                UpdateOptionColors()
                 callback(selected)
             else
+                -- Обновляем цвета всех кнопок
+                for _, btn in pairs(allOptionButtons) do
+                    if btn.Text == option then
+                        btn.TextColor3 = SELECTED_TEXT_COLOR
+                        btn.BackgroundColor3 = SELECTED_BG_COLOR
+                        CreateTween(btn, {BackgroundTransparency = 0}, animationspeed.Fast)
+                    else
+                        btn.TextColor3 = c.Text
+                        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                        CreateTween(btn, {BackgroundTransparency = 1}, animationspeed.Fast)
+                    end
+                end
+
                 selected = option
                 UpdateSelectedText()
-                UpdateOptionColors()
                 callback(selected)
                 CloseDropdown()
             end
         end)
 
-        table.insert(allOptionButtons, optionBtn)
+        allOptionButtons[#allOptionButtons + 1] = optionBtn
+        return optionBtn
     end
 
-    -- Обработка поиска
+    -- Создаем кнопки опций
+    for _, option in ipairs(options) do
+        CreateOptionButton(option)
+    end
+
+    -- Обработчик изменения текста в поиске
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local visibleHeight = FilterOptions(searchBox.Text)
-        local showSearch = #options > 5
-        local totalHeight = visibleHeight + (showSearch and 40 or 8)
-        totalHeight = math.min(totalHeight, maxVisibleOptions * optionHeight + (showSearch and 40 or 8))
-        
-        if expanded then
-            dropdownFrame.Size = UDim2.new(1, 0, 0, totalHeight)
-        end
+        FilterOptions(searchBox.Text)
     end)
 
-    -- Кнопка переключения
+    -- Кнопка для переключения dropdown'а
     local toggleBtn = CreateInstance("TextButton", {
         Name = "ToggleBtn",
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 8,
+        ZIndex = 3,
         Parent = selectedDisplay
     })
 
@@ -2295,51 +2259,28 @@ function Library._CreateDropdown(tab, config)
         end
     end)
 
-    -- Глобальный обработчик кликов вне dropdown
-    if not Library._GlobalClickHandler then
-        Library._GlobalClickHandler = true
-        
-        game:GetService("UserInputService").InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                local mousePos = game:GetService("UserInputService"):GetMouseLocation()
-                
-                -- Проверяем все открытые dropdown
-                for dropdownFrameInstance, dropdownData in pairs(Library._OpenDropdowns) do
-                    if dropdownData and dropdownData.isOpen then
-                        local isInside = false
-                        
-                        -- Проверяем основной фрейм
-                        local framePos = dropdownFrameInstance.AbsolutePosition
-                        local frameSize = dropdownFrameInstance.AbsoluteSize
-                        
-                        if mousePos.X >= framePos.X and mousePos.X <= framePos.X + frameSize.X and
-                           mousePos.Y >= framePos.Y and mousePos.Y <= framePos.Y + frameSize.Y then
-                            isInside = true
-                        end
-                        
-                        -- Проверяем выпадающий фрейм
-                        local dropdownFrame = dropdownFrameInstance:FindFirstChild("DropdownFrame")
-                        if dropdownFrame and dropdownFrame.Visible then
-                            local ddPos = dropdownFrame.AbsolutePosition
-                            local ddSize = dropdownFrame.AbsoluteSize
-                            
-                            if mousePos.X >= ddPos.X and mousePos.X <= ddPos.X + ddSize.X and
-                               mousePos.Y >= ddPos.Y and mousePos.Y <= ddPos.Y + ddSize.Y then
-                                isInside = true
-                            end
-                        end
-                        
-                        -- Если клик был вне dropdown, закрываем его
-                        if not isInside and dropdownData.closeFunc then
-                            dropdownData.closeFunc()
-                        end
-                    end
-                end
+    -- Закрытие dropdown'а при клике вне его
+    local function HandleOutsideClick(input)
+        if expanded and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = game:GetService("UserInputService"):GetMouseLocation()
+            local absolutePosition = frame.AbsolutePosition
+            local absoluteSize = frame.AbsoluteSize
+            local dropdownBottom = absolutePosition.Y + absoluteSize.Y + totalOptionsHeight + 60
+
+            -- Проверяем, находится ли клик вне dropdown'а
+            if mousePos.X < absolutePosition.X - 10 or
+               mousePos.X > absolutePosition.X + absoluteSize.X + 10 or
+               mousePos.Y < absolutePosition.Y - 10 or
+               mousePos.Y > dropdownBottom + 10 then
+                CloseDropdown()
             end
-        end)
+        end
     end
 
-    -- Методы управления
+    -- Подписываемся на клики
+    game:GetService("UserInputService").InputBegan:Connect(HandleOutsideClick)
+
+    -- Методы для управления dropdown'ом
     local methods = {
         SetValue = function(_, value)
             if multiSelect and type(value) == "table" then
@@ -2347,112 +2288,44 @@ function Library._CreateDropdown(tab, config)
             elseif not multiSelect then
                 selected = value
             end
-            
+
             UpdateSelectedText()
-            UpdateOptionColors()
+            UpdateOptionButtonsColors()
             callback(selected)
         end,
-        
+
         GetValue = function()
             return selected
         end,
-        
+
         Refresh = function(_, newOptions)
             options = newOptions
-            
+
             -- Удаляем старые кнопки
-            for _, btn in ipairs(allOptionButtons) do
-                btn:Destroy()
-            end
-            allOptionButtons = {}
-            
-            -- Удаляем старый UIListLayout
             for _, child in ipairs(optionsScroll:GetChildren()) do
-                if child:IsA("UIListLayout") then
+                if child:IsA("TextButton") then
                     child:Destroy()
                 end
             end
-            
-            -- Создаем новый UIListLayout
-            local newListLayout = Instance.new("UIListLayout")
-            newListLayout.Padding = UDim.new(0, 2)
-            newListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            newListLayout.Parent = optionsScroll
-            
+
+            allOptionButtons = {}
+
             -- Создаем новые кнопки
             for _, option in ipairs(options) do
-                local optionBtn = CreateInstance("TextButton", {
-                    Name = "Option_" .. option,
-                    Font = Enum.Font.Gotham,
-                    TextColor3 = Color3.fromRGB(220, 220, 220),
-                    Text = tostring(option),
-                    BackgroundColor3 = Color3.fromRGB(45, 45, 45),
-                    BackgroundTransparency = 0,
-                    BorderSizePixel = 0,
-                    TextSize = 12,
-                    Size = UDim2.new(1, -8, 0, optionHeight - 2),
-                    Position = UDim2.new(0, 4, 0, 0),
-                    ZIndex = 102,
-                    Parent = optionsScroll
-                })
-
-                local btnCorner = Instance.new("UICorner")
-                btnCorner.CornerRadius = UDim.new(0, 4)
-                btnCorner.Parent = optionBtn
-                
-                -- Обработчики событий (повторяются как выше)
-                optionBtn.MouseEnter:Connect(function()
-                    if optionBtn.BackgroundColor3 ~= Color3.fromRGB(50, 150, 255) then
-                        optionBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                    end
-                end)
-
-                optionBtn.MouseLeave:Connect(function()
-                    if optionBtn.BackgroundColor3 ~= Color3.fromRGB(50, 150, 255) then
-                        optionBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-                    end
-                end)
-
-                optionBtn.MouseButton1Click:Connect(function()
-                    if multiSelect then
-                        local found = false
-                        for i, sel in ipairs(selected) do
-                            if sel == option then
-                                table.remove(selected, i)
-                                found = true
-                                break
-                            end
-                        end
-                        
-                        if not found then
-                            table.insert(selected, option)
-                        end
-                        
-                        UpdateSelectedText()
-                        UpdateOptionColors()
-                        callback(selected)
-                    else
-                        selected = option
-                        UpdateSelectedText()
-                        UpdateOptionColors()
-                        callback(selected)
-                        CloseDropdown()
-                    end
-                end)
-                
-                table.insert(allOptionButtons, optionBtn)
+                CreateOptionButton(option)
             end
-            
-            optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * optionHeight)
-            
-            -- Закрываем если открыт
+
+            -- Обновляем размеры
+            totalOptionsHeight = math.min(#options * s.Dropdown.OptionHeight, maxVisibleOptions * s.Dropdown.OptionHeight)
+            optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * s.Dropdown.OptionHeight)
+
+            -- Если dropdown открыт, закрываем его для обновления
             if expanded then
                 CloseDropdown()
             end
         end
     }
 
-    -- Регистрация флага если нужно
     if flag and tab._library then
         tab._library:_RegisterConfigElement(flag, "Dropdown",
             function() return selected end,
