@@ -1390,7 +1390,7 @@ function Library._CreateSlider(tab, config)
         PlaceholderText = "Value",
         PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
         TextXAlignment = Enum.TextXAlignment.Center,
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 20),
         BackgroundTransparency = 0,
         Position = UDim2.new(1, -80, 0, 5),
         TextSize = 14,
@@ -1424,7 +1424,7 @@ function Library._CreateSlider(tab, config)
     -- Прогресс
     local sliderFill = CreateInstance("Frame", {
         Name = "SliderFill",
-        BackgroundColor3 = Color3.fromRGB(50, 150, 255),
+        BackgroundColor3 = Color3.fromRGB(80, 0, 0),
         BorderSizePixel = 0,
         Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
         Parent = sliderBg
