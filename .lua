@@ -678,18 +678,18 @@ function Library:_Createv0rtexdControls()
         Parent = keybindFrame
     })
 
-    -- Текстовое поле для отображения текущего бинда (с ограничением)
+       -- Текстовое поле для отображения текущего бинда (с ограничением)
     local keybindDisplay = CreateInstance("TextLabel", {
         Name = "KeybindDisplay",
         Font = Enum.Font.Gotham,
         TextColor3 = c.Text,
         Text = self._toggleKey.Name,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextTruncate = Enum.TextTruncate.AtEnd, -- Текст не выходит за границы
+        TextXAlignment = Enum.TextXAlignment.Center, -- ← ПОМЕНЯЛ Right на Center
+        TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 22, 0, 0), -- Начинается после иконки
+        Position = UDim2.new(0, 0, 0, 0), -- ← Теперь с начала фрейма
         TextSize = 11,
-        Size = UDim2.new(1, -27, 1, 0), -- Оставляет место для иконки
+        Size = UDim2.new(1, 0, 1, 0), -- ← Занимает весь фрейм
         Parent = keybindFrame
     })
 
