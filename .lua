@@ -647,47 +647,82 @@ function Library:_CreateMainv0rtexd()
 end
 
 function Library:_Createv0rtexdControls()
-    -- Кнопка keybind (самая левая из трех)
-    local keybindBtn = CreateInstance("ImageLabel", {
-        Name = "Keybind",
-        ImageColor3 = c.TextDark,
-        Image = "rbxassetid://107097882331060", -- Иконка клавиатуры
-        BackgroundTransparency = 1,
+    -- Кнопка keybind (теперь с фоном и обводкой)
+    local keybindFrame = CreateInstance("Frame", {
+        Name = "KeybindButton",
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -60, 0, 15),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(1, -65, 0, 10),
+        Size = UDim2.new(0, 50, 0, 25),
         Parent = self.topBar
     })
+    CreateCorner(keybindFrame, 4)
+    CreateStroke(keybindFrame, 1, Color3.fromRGB(80, 80, 80))
 
-    local keybindClickArea = CreateInstance("TextButton", {
-        Name = "TextButton",
-        Text = "",
-        Rotation = 0.01,
+    -- Иконка клавиатуры внутри фрейма
+    local keybindIcon = CreateInstance("ImageLabel", {
+        Name = "Icon",
+        ImageColor3 = c.Text,
+        Image = "rbxassetid://107097882331060", -- Иконка клавиатуры
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 21, 0, 15),
-        Parent = keybindBtn
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 5, 0.5, 0),
+        Size = UDim2.new(0, 12, 0, 12),
+        Parent = keybindFrame
     })
 
     -- Текстовое поле для отображения текущего бинда
     local keybindDisplay = CreateInstance("TextLabel", {
         Name = "KeybindDisplay",
         FontFace = f.Regular,
-        TextColor3 = c.TextDark,
+        TextColor3 = c.Text,
         Text = self._toggleKey.Name,
-        TextXAlignment = Enum.TextXAlignment.Center,
+        TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, -20, 0, -5),
+        Position = UDim2.new(0, 20, 0, 0),
         TextSize = 11,
-        Size = UDim2.new(0, 20, 0, 25),
-        Visible = true, -- Всегда показывать клавишу
-        Parent = keybindBtn
+        Size = UDim2.new(1, -25, 1, 0),
+        Parent = keybindFrame
+    })
+
+    local keybindClickArea = CreateInstance("TextButton", {
+        Name = "ClickButton",
+        Text = "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Parent = keybindFrame
     })
 
     local bindingToggleKey = false
 
+    -- Анимация при наведении
+    keybindClickArea.MouseEnter:Connect(function()
+        if not bindingToggleKey then
+            CreateTween(keybindFrame, {BackgroundTransparency = 0}, animationspeed.Fast)
+            CreateTween(keybindIcon, {ImageColor3 = c.Accent}, animationspeed.Fast)
+            CreateTween(keybindDisplay, {TextColor3 = c.Accent}, animationspeed.Fast)
+        end
+    end)
+
+    keybindClickArea.MouseLeave:Connect(function()
+        if not bindingToggleKey then
+            CreateTween(keybindFrame, {BackgroundTransparency = 0.2}, animationspeed.Fast)
+            CreateTween(keybindIcon, {ImageColor3 = c.Text}, animationspeed.Fast)
+            CreateTween(keybindDisplay, {TextColor3 = c.Text}, animationspeed.Fast)
+        end
+    end)
+
     keybindClickArea.MouseButton1Click:Connect(function()
         if not bindingToggleKey then
             bindingToggleKey = true
+            
+            -- Визуальная обратная связь при нажатии
+            CreateTween(keybindFrame, {
+                BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+                BackgroundTransparency = 0
+            }, animationspeed.Fast)
             keybindDisplay.Text = "..."
             
             local connection
@@ -700,6 +735,12 @@ function Library:_Createv0rtexdControls()
                     keybindDisplay.Text = input.KeyCode.Name
                     bindingToggleKey = false
                     
+                    -- Возвращаем обычный цвет
+                    CreateTween(keybindFrame, {
+                        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                        BackgroundTransparency = 0.2
+                    }, animationspeed.Fast)
+                    
                     -- Сохраняем в конфиг если есть автосохранение
                     if self._autoSave then
                         self:SaveConfig(self._currentConfig)
@@ -708,7 +749,7 @@ function Library:_Createv0rtexdControls()
                     -- Уведомление
                     self:Notify({
                         Title = "Toggle Key Updated",
-                        Description = "New key: " .. input.KeyCode.Name,
+                        Description = "Press " .. input.KeyCode.Name .. " to toggle GUI",
                         Duration = 2,
                         Icon = "rbxassetid://107097882331060"
                     })
@@ -717,33 +758,28 @@ function Library:_Createv0rtexdControls()
                         connection:Disconnect()
                     end
                 elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    -- Если клик вне, отменяем биндинг
+                    -- Если клик вне кнопки, отменяем биндинг
                     local mousePos = ui:GetMouseLocation()
-                    local btnPos = keybindBtn.AbsolutePosition
-                    local btnSize = keybindBtn.AbsoluteSize
+                    local btnPos = keybindFrame.AbsolutePosition
+                    local btnSize = keybindFrame.AbsoluteSize
                     
                     if mousePos.X < btnPos.X - 20 or mousePos.X > btnPos.X + btnSize.X + 20 or
                        mousePos.Y < btnPos.Y - 20 or mousePos.Y > btnPos.Y + btnSize.Y + 20 then
                         bindingToggleKey = false
                         keybindDisplay.Text = self._toggleKey.Name
+                        
+                        -- Возвращаем обычный цвет
+                        CreateTween(keybindFrame, {
+                            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                            BackgroundTransparency = 0.2
+                        }, animationspeed.Fast)
+                        
                         if connection then
                             connection:Disconnect()
                         end
                     end
                 end
             end)
-        end
-    end)
-
-    keybindBtn.MouseEnter:Connect(function()
-        CreateTween(keybindBtn, {ImageColor3 = c.Text}, animationspeed.Fast)
-        CreateTween(keybindDisplay, {TextColor3 = c.Text}, animationspeed.Fast)
-    end)
-
-    keybindBtn.MouseLeave:Connect(function()
-        if not bindingToggleKey then
-            CreateTween(keybindBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
-            CreateTween(keybindDisplay, {TextColor3 = c.TextDark}, animationspeed.Fast)
         end
     end)
 
