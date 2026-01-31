@@ -684,7 +684,7 @@ function Library:_Createv0rtexdControls()
         Font = Enum.Font.Gotham,
         TextColor3 = c.Text,
         Text = self._toggleKey.Name,
-        TextXAlignment = Enum.TextXAlignment.Right,
+        TextXAlignment = Enum.TextXAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd, -- Текст не выходит за границы
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 22, 0, 0), -- Начинается после иконки
