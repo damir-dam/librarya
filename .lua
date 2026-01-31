@@ -647,6 +647,107 @@ function Library:_CreateMainv0rtexd()
 end
 
 function Library:_Createv0rtexdControls()
+    -- Кнопка keybind (самая левая из трех)
+    local keybindBtn = CreateInstance("ImageLabel", {
+        Name = "Keybind",
+        ImageColor3 = c.TextDark,
+        Image = "rbxassetid://107097882331060", -- Иконка клавиатуры
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -60, 0, 15),
+        Size = UDim2.new(0, 15, 0, 15),
+        Parent = self.topBar
+    })
+
+    local keybindClickArea = CreateInstance("TextButton", {
+        Name = "TextButton",
+        Text = "",
+        Rotation = 0.01,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 21, 0, 15),
+        Parent = keybindBtn
+    })
+
+    -- Текстовое поле для отображения текущего бинда
+    local keybindDisplay = CreateInstance("TextLabel", {
+        Name = "KeybindDisplay",
+        FontFace = f.Regular,
+        TextColor3 = c.TextDark,
+        Text = self._toggleKey.Name,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, -20, 0, -5),
+        TextSize = 11,
+        Size = UDim2.new(0, 20, 0, 25),
+        Visible = true, -- Всегда показывать клавишу
+        Parent = keybindBtn
+    })
+
+    local bindingToggleKey = false
+
+    keybindClickArea.MouseButton1Click:Connect(function()
+        if not bindingToggleKey then
+            bindingToggleKey = true
+            keybindDisplay.Text = "..."
+            
+            local connection
+            connection = ui.InputBegan:Connect(function(input, gameProcessed)
+                if gameProcessed then return end
+                
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    -- Устанавливаем новую клавишу переключения
+                    self._toggleKey = input.KeyCode
+                    keybindDisplay.Text = input.KeyCode.Name
+                    bindingToggleKey = false
+                    
+                    -- Сохраняем в конфиг если есть автосохранение
+                    if self._autoSave then
+                        self:SaveConfig(self._currentConfig)
+                    end
+                    
+                    -- Уведомление
+                    self:Notify({
+                        Title = "Toggle Key Updated",
+                        Description = "New key: " .. input.KeyCode.Name,
+                        Duration = 2,
+                        Icon = "rbxassetid://107097882331060"
+                    })
+                    
+                    if connection then
+                        connection:Disconnect()
+                    end
+                elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    -- Если клик вне, отменяем биндинг
+                    local mousePos = ui:GetMouseLocation()
+                    local btnPos = keybindBtn.AbsolutePosition
+                    local btnSize = keybindBtn.AbsoluteSize
+                    
+                    if mousePos.X < btnPos.X - 20 or mousePos.X > btnPos.X + btnSize.X + 20 or
+                       mousePos.Y < btnPos.Y - 20 or mousePos.Y > btnPos.Y + btnSize.Y + 20 then
+                        bindingToggleKey = false
+                        keybindDisplay.Text = self._toggleKey.Name
+                        if connection then
+                            connection:Disconnect()
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+
+    keybindBtn.MouseEnter:Connect(function()
+        CreateTween(keybindBtn, {ImageColor3 = c.Text}, animationspeed.Fast)
+        CreateTween(keybindDisplay, {TextColor3 = c.Text}, animationspeed.Fast)
+    end)
+
+    keybindBtn.MouseLeave:Connect(function()
+        if not bindingToggleKey then
+            CreateTween(keybindBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
+            CreateTween(keybindDisplay, {TextColor3 = c.TextDark}, animationspeed.Fast)
+        end
+    end)
+
+    -- Minimize button (теперь правее)
     local minimizeBtn = CreateInstance("ImageLabel", {
         Name = "Minimize",
         ImageColor3 = c.TextDark,
@@ -679,6 +780,7 @@ function Library:_Createv0rtexdControls()
         CreateTween(minimizeBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
     end)
 
+    -- Close button (самая правая)
     local closeBtn = CreateInstance("ImageButton", {
         Name = "Close",
         ImageColor3 = c.TextDark,
@@ -702,6 +804,7 @@ function Library:_Createv0rtexdControls()
         CreateTween(closeBtn, {ImageColor3 = c.TextDark}, animationspeed.Fast)
     end)
 
+    -- Resize button
     local resizeBtn = CreateInstance("ImageButton", {
         Name = "Resize",
         ImageColor3 = Color3.fromRGB(110, 110, 110),
@@ -874,6 +977,10 @@ function Library:SaveConfig(configName)
     EnsureConfigFolder()
     
     local configData = {}
+    
+    -- Сохраняем toggle key
+    configData["_toggleKey"] = self._toggleKey.Name
+    
     for id, element in pairs(self._configElements) do
         local value = element.getValue()
         
@@ -953,6 +1060,19 @@ function Library:LoadConfig(configName)
             pcall(function()
                 self._configElements[id].setValue(value)
             end)
+        elseif id == "_toggleKey" then
+            -- Загружаем toggle key
+            if Enum.KeyCode:FindFirstChild(value) then
+                self._toggleKey = Enum.KeyCode[value]
+                -- Обновляем отображение если keybind кнопка существует
+                local keybindBtn = self.topBar:FindFirstChild("Keybind")
+                if keybindBtn then
+                    local keybindDisplay = keybindBtn:FindFirstChild("KeybindDisplay")
+                    if keybindDisplay then
+                        keybindDisplay.Text = value
+                    end
+                end
+            end
         end
     end
     
