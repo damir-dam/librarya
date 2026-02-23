@@ -2575,6 +2575,7 @@ function Library._CreateKeybind(tab, config, lib)
     local flag = config.Flag
     local currentKey = default
     local listening = false
+    local allowNone = config.AllowNone or true -- Опция разрешить None
 
     local frame = CreateInstance("Frame", {
         Name = "Keybind_" .. name,
@@ -2644,11 +2645,16 @@ function Library._CreateKeybind(tab, config, lib)
             keyLabel.Text = "..."
             keybindBox.Size = UDim2.new(0, 43, 0, 26)
         else
-            local keyName = currentKey.Name
+            local keyName = currentKey == Enum.KeyCode.Unknown and "None" or currentKey.Name
             local textWidth = math.max(#keyName * 9 + 10, 24)
             keybindBox.Size = UDim2.new(0, textWidth, 0, 26)
             keyLabel.Text = keyName
         end
+    end
+
+    local function StopListening()
+        listening = false
+        UpdateKeyDisplay()
     end
 
     button.MouseButton1Click:Connect(function()
@@ -2658,11 +2664,32 @@ function Library._CreateKeybind(tab, config, lib)
 
     local inputConnection
     inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
-        if listening and input.UserInputType == Enum.UserInputType.Keyboard then
-            currentKey = input.KeyCode
-            listening = false
-            lib._keybinds[keybindId].key = currentKey
-            UpdateKeyDisplay()
+        if listening then
+            -- Проверяем, было ли нажатие на кнопку мыши вне зоны keybind
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                -- Получаем позицию мыши
+                local mousePos = userinput:GetMouseLocation()
+                
+                -- Проверяем, находится ли мышь над keybindBox
+                local absPos, absSize = keybindBox.AbsolutePosition, keybindBox.AbsoluteSize
+                local mouseOverKeybind = mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+                                        mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y
+                
+                -- Если кликнули не на keybindBox и разрешен None
+                if not mouseOverKeybind and allowNone then
+                    currentKey = Enum.KeyCode.Unknown
+                    lib._keybinds[keybindId].key = currentKey
+                    StopListening()
+                    return
+                end
+            end
+            
+            -- Обработка клавиш клавиатуры
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                currentKey = input.KeyCode
+                lib._keybinds[keybindId].key = currentKey
+                StopListening()
+            end
         end
     end)
 
