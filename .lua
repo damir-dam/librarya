@@ -2663,12 +2663,12 @@ function Library._CreateKeybind(tab, config, lib)
     end)
 
     local inputConnection
-    inputConnection = ui.InputBegan:Connect(function(input, gameProcessed)
+    inputConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
         if listening then
             -- Проверяем, было ли нажатие на кнопку мыши вне зоны keybind
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                -- Получаем позицию мыши
-                local mousePos = userinput:GetMouseLocation()
+                -- Получаем позицию мыши через сам input
+                local mousePos = Vector2.new(input.Position.X, input.Position.Y)
                 
                 -- Проверяем, находится ли мышь над keybindBox
                 local absPos, absSize = keybindBox.AbsolutePosition, keybindBox.AbsoluteSize
