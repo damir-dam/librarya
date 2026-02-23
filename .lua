@@ -2575,7 +2575,7 @@ function Library._CreateKeybind(tab, config, lib)
     local flag = config.Flag
     local currentKey = default
     local listening = false
-    local allowNone = config.AllowNone or true -- Опция разрешить None
+    local allowNone = config.AllowNone or true
 
     local frame = CreateInstance("Frame", {
         Name = "Keybind_" .. name,
@@ -2658,16 +2658,31 @@ function Library._CreateKeybind(tab, config, lib)
     end
 
     button.MouseButton1Click:Connect(function()
-        listening = true
-        UpdateKeyDisplay()
+        if not listening then
+            listening = true
+            UpdateKeyDisplay()
+        end
+    end)
+
+    -- Отключаем всплытие события для кнопки, чтобы клик по ней не воспринимался как клик вне зоны
+    button.MouseButton1Down:Connect(function()
+        -- Пустая функция для предотвращения всплытия
     end)
 
     local inputConnection
     inputConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
         if listening then
-            -- Проверяем, было ли нажатие на кнопку мыши вне зоны keybind
+            -- Обработка клавиш клавиатуры
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                currentKey = input.KeyCode
+                lib._keybinds[keybindId].key = currentKey
+                StopListening()
+                return
+            end
+            
+            -- Обработка кликов мыши для установки None
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                -- Получаем позицию мыши через сам input
+                -- Получаем позицию мыши
                 local mousePos = Vector2.new(input.Position.X, input.Position.Y)
                 
                 -- Проверяем, находится ли мышь над keybindBox
@@ -2682,13 +2697,6 @@ function Library._CreateKeybind(tab, config, lib)
                     StopListening()
                     return
                 end
-            end
-            
-            -- Обработка клавиш клавиатуры
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                currentKey = input.KeyCode
-                lib._keybinds[keybindId].key = currentKey
-                StopListening()
             end
         end
     end)
